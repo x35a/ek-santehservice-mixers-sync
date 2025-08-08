@@ -27,6 +27,23 @@ try {
         exit(2);
     }
 
+    // Dump processed EK products for debugging/inspection
+    try {
+        $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
+        if (!is_dir($dumpDir)) {
+            @mkdir($dumpDir, 0777, true);
+        }
+        $ekDumpPath = $dumpDir . DIRECTORY_SEPARATOR . 'ek-products.json';
+        $ekJson = json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_string($ekJson)) {
+            @file_put_contents($ekDumpPath, $ekJson . PHP_EOL);
+            safeLog('info', 'ek_products_dumped', ['path' => $ekDumpPath, 'bytes' => strlen($ekJson)]);
+        }
+    } catch (Throwable $e) {
+        safeLog('error', 'ek_products_dump_failed', ['error' => $e->getMessage()]);
+    }
+
+
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
     $santehProducts = fetchSantehserviceMixersProductsFromXml();
     safeLog('info', 'santehservice_products_loaded', ['total' => count($santehProducts)]);
