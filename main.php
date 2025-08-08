@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/fetch-ek-products.php';
+require __DIR__ . '/fetch-santehservice-mixers.php';
 
 safeLog('info', 'run start');
 try {
@@ -25,8 +26,16 @@ try {
         sendAlertEmail($subject, $body);
         exit(2);
     }
-    safeLog('info', 'run complete', ['total' => count($products)]);
-    echo json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+
+    // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
+    $santehProducts = fetchSantehserviceMixersProductsFromXml();
+    safeLog('info', 'santehservice_products_loaded', ['total' => count($santehProducts)]);
+    
+    safeLog('info', 'run complete', [
+        'ek_total' => count($products),
+        'santeh_total' => isset($santehProducts) ? count($santehProducts) : 0,
+    ]);
+    // echo json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
 } catch (Throwable $e) {
     safeLog('error', 'run failed', ['error' => $e->getMessage()]);
     // Send alert email on exception
