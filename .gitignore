@@ -1,4 +1,6 @@
 .env
+*.log
+logs/
 .cursor/rules/context.mdc
 ekoplast-products.json
 santehservice-feed.xml

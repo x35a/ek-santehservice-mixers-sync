@@ -34,6 +34,131 @@ function loadEnvFileIfPresent(string $path): void
     }
 }
 
+// Lightweight file logger. Writes ISO8601 timestamps, level, message, and JSON context.
+function cleanupOldLogs(string $dir, int $maxAgeDays): void
+{
+    if (!is_dir($dir)) {
+        return;
+    }
+    $threshold = time() - ($maxAgeDays * 86400);
+    $entries = @scandir($dir) ?: [];
+    foreach ($entries as $name) {
+        if ($name === '.' || $name === '..') {
+            continue;
+        }
+        $path = $dir . DIRECTORY_SEPARATOR . $name;
+        if (!is_file($path)) {
+            continue;
+        }
+        if (!str_ends_with($name, '.log')) {
+            continue;
+        }
+        $mtime = @filemtime($path);
+        if ($mtime !== false && $mtime < $threshold) {
+            @unlink($path);
+        }
+    }
+}
+
+function getLogPath(): string
+{
+    static $cachedPath = null;
+    if ($cachedPath !== null) {
+        return $cachedPath;
+    }
+
+    $custom = $_ENV['WC_LOG_FILE'] ?? getenv('WC_LOG_FILE');
+    if (is_string($custom) && $custom !== '') {
+        return $cachedPath = $custom;
+    }
+
+    $dir = $_ENV['WC_LOG_DIR'] ?? getenv('WC_LOG_DIR');
+    if (!is_string($dir) || $dir === '') {
+        $dir = __DIR__ . DIRECTORY_SEPARATOR . 'logs';
+    }
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0777, true);
+    }
+    if (!is_dir($dir) || !is_writable($dir)) {
+        // Fallback to script directory if logs/ is not writable
+        $dir = __DIR__;
+    }
+
+    // Keep only last 7 days of logs
+    cleanupOldLogs($dir, 7);
+
+    $filename = date('Y-m-d-H-i-s') . '-' . str_replace('.', '', uniqid('', true)) . '.log';
+    $cachedPath = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
+    return $cachedPath;
+}
+
+function safeLog(string $level, string $message, array $context = []): void
+{
+    try {
+        $includeRunId = (($_ENV['WC_LOG_INCLUDE_RUN_ID'] ?? getenv('WC_LOG_INCLUDE_RUN_ID') ?? '') === '1');
+        $includeScript = (($_ENV['WC_LOG_INCLUDE_SCRIPT'] ?? getenv('WC_LOG_INCLUDE_SCRIPT') ?? '') === '1');
+
+        static $runId = null;
+        if ($includeRunId && $runId === null) {
+            $runId = str_replace('.', '', uniqid('', true));
+        }
+
+        $script = $includeScript ? basename($_SERVER['SCRIPT_FILENAME'] ?? __FILE__) : null;
+
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $caller = $trace[1] ?? [];
+        $callerFunction = null;
+        if (isset($caller['class'], $caller['type'], $caller['function'])) {
+            $callerFunction = $caller['class'] . $caller['type'] . $caller['function'];
+        } else {
+            $callerFunction = $caller['function'] ?? null;
+        }
+        $callerFile = $caller['file'] ?? null;
+        $callerLine = $caller['line'] ?? null;
+
+        $relativePath = null;
+        if (is_string($callerFile) && $callerFile !== '') {
+            $prefix = __DIR__ . DIRECTORY_SEPARATOR;
+            if (str_starts_with($callerFile, $prefix)) {
+                $relativePath = substr($callerFile, strlen($prefix));
+            } else {
+                $relativePath = basename($callerFile);
+            }
+        }
+
+        $autoContext = [];
+        if ($includeRunId && $runId !== null) {
+            $autoContext['run_id'] = $runId;
+        }
+        if ($includeScript && $script !== null) {
+            $autoContext['script'] = $script;
+        }
+        if ($relativePath !== null) {
+            $autoContext['file'] = $relativePath;
+        }
+        if ($callerLine !== null) {
+            $autoContext['line'] = $callerLine;
+        }
+        if ($callerFunction !== null) {
+            $autoContext['func'] = $callerFunction;
+        }
+
+        // Merge user context, user-supplied keys win
+        foreach ($context as $k => $v) {
+            $autoContext[$k] = $v;
+        }
+
+        $line = sprintf('%s [%s] %s', date('c'), strtoupper($level), $message);
+        if (!empty($autoContext)) {
+            $line .= ' ' . json_encode($autoContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $line .= PHP_EOL;
+        @file_put_contents(getLogPath(), $line, FILE_APPEND | LOCK_EX);
+    } catch (Throwable $e) {
+        // Intentionally ignore logging failures to avoid breaking runtime on restrictive hosts
+    }
+}
+
 // HTTP GET helper using cURL, with fallback to streams if cURL missing
 function httpGet(string $url, array $headers = [], int $timeoutSeconds = 30): array
 {
@@ -114,39 +239,49 @@ function fetchSantehserviceMixersProducts(): array
 
     $apiBase = rtrim($siteUrl, '/') . '/wp-json/wc/v3/products';
 
+    safeLog('info', 'fetch start', ['per_page' => $perPage, 'query_auth' => $useQueryAuth ? 1 : 0]);
+
     $pageNumber = 1;
     $allProducts = [];
 
-    do {
-        $query = [
-            'per_page' => $perPage,
-            'page' => $pageNumber,
-        ];
-        if ($useQueryAuth) {
-            $query['consumer_key'] = $username;
-            $query['consumer_secret'] = $password;
-        }
-        $url = $apiBase . '?' . http_build_query($query);
+    try {
+        do {
+            $query = [
+                'per_page' => $perPage,
+                'page' => $pageNumber,
+            ];
+            if ($useQueryAuth) {
+                $query['consumer_key'] = $username;
+                $query['consumer_secret'] = $password;
+            }
+            $url = $apiBase . '?' . http_build_query($query);
 
-        $headers = [
-            'Accept: application/json',
-        ];
-        if (!$useQueryAuth) {
-            $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
-        }
+            $headers = [
+                'Accept: application/json',
+            ];
+            if (!$useQueryAuth) {
+                $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
+            }
 
-        [, $body] = httpGet($url, $headers, 60);
-        $decoded = json_decode($body, true);
-        if (!is_array($decoded)) {
-            throw new RuntimeException('Unexpected response format');
-        }
-        $count = count($decoded);
-        if ($count > 0) {
-            $allProducts = array_merge($allProducts, $decoded);
-        }
-        $pageNumber++;
-    } while ($count === $perPage);
+            safeLog('info', 'request', ['page' => $pageNumber]);
+            [, $body] = httpGet($url, $headers, 60);
+            $decoded = json_decode($body, true);
+            if (!is_array($decoded)) {
+                throw new RuntimeException('Unexpected response format');
+            }
+            $count = count($decoded);
+            safeLog('info', 'page_fetched', ['page' => $pageNumber, 'items' => $count]);
+            if ($count > 0) {
+                $allProducts = array_merge($allProducts, $decoded);
+            }
+            $pageNumber++;
+        } while ($count === $perPage);
+    } catch (Throwable $e) {
+        safeLog('error', 'fetch failed', ['page' => $pageNumber, 'error' => $e->getMessage()]);
+        throw $e;
+    }
 
+    safeLog('info', 'fetch complete', ['total' => count($allProducts)]);
     return $allProducts;
 }
 
