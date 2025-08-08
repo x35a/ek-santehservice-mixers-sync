@@ -30,6 +30,23 @@ try {
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
     $santehProducts = fetchSantehserviceMixersProductsFromXml();
     safeLog('info', 'santehservice_products_loaded', ['total' => count($santehProducts)]);
+    if (empty($santehProducts)) {
+        safeLog('error', 'santehservice_xml_empty', [
+            'reason' => 'no offers returned',
+            'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
+        ]);
+        $subject = buildAlertSubject('Santehservice XML Empty');
+        $body = "The Santehservice XML feed returned no offers.\n\n" . json_encode([
+            'reason' => 'no offers returned',
+            'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+        $log = getCurrentLogContents();
+        if ($log !== '') {
+            $body .= "--- Log ---\n" . $log;
+        }
+        sendAlertEmail($subject, $body);
+        exit(3);
+    }
     
     safeLog('info', 'run complete', [
         'ek_total' => count($products),

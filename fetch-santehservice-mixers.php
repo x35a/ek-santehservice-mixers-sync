@@ -30,7 +30,10 @@ function fetchSantehserviceMixersProductsFromXml(): array
         safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
         return $products;
     } catch (Throwable $e) {
-        safeLog('error', 'santehservice_xml_fetch_failed', ['error' => $e->getMessage()]);
+        safeLog('error', 'santehservice_xml_fetch_failed', [
+            'error' => $e->getMessage(),
+            'url' => $url,
+        ]);
         throw $e;
     }
 }
