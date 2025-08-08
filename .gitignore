@@ -1,4 +1,6 @@
+.env
 .cursor/rules/context.mdc
 ekoplast-products.json
 santehservice-feed.xml
 test.php
+test-cron-job.php
