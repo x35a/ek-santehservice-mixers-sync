@@ -206,6 +206,22 @@ function httpGet(string $url, array $headers = [], int $timeoutSeconds = 30): ar
     return [$status, (string) $body];
 }
 
+/**
+ * Determine whether a product contains the specified WooCommerce category id.
+ */
+function productHasCategoryId(array $product, int $categoryId): bool
+{
+    if (!isset($product['categories']) || !is_array($product['categories'])) {
+        return false;
+    }
+    foreach ($product['categories'] as $category) {
+        if (is_array($category) && (int)($category['id'] ?? 0) === $categoryId) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Public function to fetch WooCommerce products based on env config
 function fetchSantehserviceMixersProducts(): array
 {
@@ -271,7 +287,23 @@ function fetchSantehserviceMixersProducts(): array
     }
 
     safeLog('info', 'fetch complete', ['total' => count($allProducts)]);
-    return $allProducts;
+
+    // Keep only products from the desired category (default: 121)
+    $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
+    $filteredProducts = array_values(array_filter(
+        $allProducts,
+        static function (array $product) use ($categoryId): bool {
+            return productHasCategoryId($product, $categoryId);
+        }
+    ));
+
+    safeLog('info', 'filter applied', [
+        'category_id' => $categoryId,
+        'before' => count($allProducts),
+        'after' => count($filteredProducts),
+    ]);
+
+    return $filteredProducts;
 }
 
 
