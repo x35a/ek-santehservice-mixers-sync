@@ -150,6 +150,143 @@ function safeLog(string $level, string $message, array $context = []): void
     }
 }
 
+// Compose and send an alert email. Safe to call from error/shutdown handlers.
+function sendAlertEmail(string $subject, string $body): bool
+{
+    try {
+        $to = (string)cfg('ALERT_EMAIL_TO', '');
+        if ($to === '') {
+            return false; // alerts disabled
+        }
+
+        $fromName  = (string)cfg('ALERT_EMAIL_FROM_NAME', 'EK Santehservice Sync');
+        $fromEmail = (string)cfg('ALERT_EMAIL_FROM_EMAIL', '');
+
+        if ($fromEmail === '') {
+            // Derive a safe default like no-reply@<host>
+            $host = parse_url((string)cfg('WC_SITE_URL', ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
+            $host = is_string($host) && $host !== '' ? $host : 'localhost';
+            $fromEmail = 'no-reply@' . $host;
+        }
+
+        $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
+        $headers = [
+            'MIME-Version: 1.0',
+            'Content-Type: text/plain; charset=UTF-8',
+            'From: ' . $encodedFromName . ' <' . $fromEmail . '>',
+            'Reply-To: ' . $fromEmail,
+        ];
+
+        // Best-effort: avoid very long lines in body
+        $wrappedBody = wordwrap($body, 998, "\n", true);
+
+        // mail() can fail silently in some environments; return its boolean result
+        $result = @mail($to, $subject, $wrappedBody, implode("\r\n", $headers));
+        return (bool)$result;
+    } catch (Throwable $e) {
+        // Avoid throwing from alert sender
+        return false;
+    }
+}
+
+// Build a default alert email subject
+function buildAlertSubject(string $kind = 'Error'): string
+{
+    $host = parse_url((string)cfg('WC_SITE_URL', ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $host = is_string($host) && $host !== '' ? $host : 'localhost';
+    $script = basename($_SERVER['SCRIPT_FILENAME'] ?? __FILE__);
+    return sprintf('[Mixers Sync] %s in %s on %s', $kind, $script, $host);
+}
+
+// Collect latest log content for this run (best-effort)
+function getCurrentLogContents(): string
+{
+    try {
+        $path = getLogPath();
+        if (is_file($path)) {
+            $size = filesize($path);
+            if ($size === false) {
+                return '';
+            }
+            // Read up to last 100 KB to keep emails reasonable
+            $max = 100 * 1024;
+            if ($size > $max) {
+                $fp = @fopen($path, 'rb');
+                if ($fp) {
+                    fseek($fp, -$max, SEEK_END);
+                    $data = stream_get_contents($fp) ?: '';
+                    fclose($fp);
+                    return "(truncated to last 100KB)\n\n" . $data;
+                }
+            }
+            return (string)file_get_contents($path);
+        }
+    } catch (Throwable $e) {
+    }
+    return '';
+}
+
+// Register global error/exception/shutdown handlers that will log and alert
+set_error_handler(static function (int $severity, string $message, ?string $file = null, ?int $line = null): bool {
+    // Respect error_reporting level: if @ operator used, error_reporting() returns 0
+    if (!(error_reporting() & $severity)) {
+        return false; // let PHP handle
+    }
+    $context = ['severity' => $severity];
+    if ($file !== null) {
+        $context['file'] = $file;
+    }
+    if ($line !== null) {
+        $context['line'] = $line;
+    }
+    safeLog('error', 'php_error', $context);
+    $subject = buildAlertSubject('PHP Error');
+    $body = "A PHP error occurred.\n\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+    $log = getCurrentLogContents();
+    if ($log !== '') {
+        $body .= "--- Log ---\n" . $log;
+    }
+    sendAlertEmail($subject, $body);
+    return true; // handled
+});
+
+set_exception_handler(static function (Throwable $e): void {
+    $context = [
+        'type' => get_class($e),
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+    ];
+    safeLog('error', 'uncaught_exception', $context);
+    $subject = buildAlertSubject('Unhandled Exception');
+    $body = "An unhandled exception occurred.\n\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+    $log = getCurrentLogContents();
+    if ($log !== '') {
+        $body .= "--- Log ---\n" . $log;
+    }
+    sendAlertEmail($subject, $body);
+});
+
+register_shutdown_function(static function (): void {
+    $err = error_get_last();
+    if ($err !== null && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        $context = [
+            'type' => $err['type'],
+            'message' => $err['message'] ?? '',
+            'file' => $err['file'] ?? '',
+            'line' => $err['line'] ?? 0,
+        ];
+        safeLog('error', 'fatal_shutdown', $context);
+        $subject = buildAlertSubject('Fatal Error');
+        $body = "A fatal error occurred during shutdown.\n\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+        $log = getCurrentLogContents();
+        if ($log !== '') {
+            $body .= "--- Log ---\n" . $log;
+        }
+        sendAlertEmail($subject, $body);
+    }
+});
+
 // HTTP GET helper using cURL, with fallback to streams if cURL missing
 function httpGet(string $url, array $headers = [], int $timeoutSeconds = 30): array
 {
