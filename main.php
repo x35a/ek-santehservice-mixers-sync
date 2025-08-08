@@ -6,7 +6,7 @@ require __DIR__ . '/fetch-santehservice-mixers.php';
 
 safeLog('info', 'run start');
 try {
-    $products = fetchSantehserviceMixersProducts();
+    $products = fetchEkProducts();
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
     if (empty($products)) {
         safeLog('info', 'run terminated', [

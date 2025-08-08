@@ -360,7 +360,7 @@ function productHasCategoryId(array $product, int $categoryId): bool
 }
 
 // Public function to fetch WooCommerce products based on env config
-function fetchSantehserviceMixersProducts(): array
+function fetchEkProducts(): array
 {
     $siteUrl = (string)cfg('WC_SITE_URL', '');
     $username = (string)cfg('WC_API_USERNAME', '');
