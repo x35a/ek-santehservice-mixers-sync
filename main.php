@@ -47,6 +47,22 @@ try {
         sendAlertEmail($subject, $body);
         exit(3);
     }
+
+    // Dump processed Santehservice products for debugging/inspection
+    try {
+        $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
+        if (!is_dir($dumpDir)) {
+            @mkdir($dumpDir, 0777, true);
+        }
+        $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . 'santehservice-products.json';
+        $json = json_encode($santehProducts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_string($json)) {
+            @file_put_contents($dumpPath, $json . PHP_EOL);
+            safeLog('info', 'santehservice_products_dumped', ['path' => $dumpPath, 'bytes' => strlen($json)]);
+        }
+    } catch (Throwable $e) {
+        safeLog('error', 'santehservice_products_dump_failed', ['error' => $e->getMessage()]);
+    }
     
     safeLog('info', 'run complete', [
         'ek_total' => count($products),
