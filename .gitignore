@@ -1,5 +1,4 @@
-.env
-*.log
+config.php
 logs/
 .cursor/rules/context.mdc
 ekoplast-products.json

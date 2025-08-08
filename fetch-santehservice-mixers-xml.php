@@ -1,37 +1,28 @@
 <?php
 declare(strict_types=1);
 
-// Optional tiny .env loader (no external libs). Only KEY=VALUE lines, ignores comments and quotes.
-// Values loaded only if corresponding env var not already set.
-function loadEnvFileIfPresent(string $path): void
+// Configuration loader from local config.php
+function getConfig(): array
 {
+    static $config = null;
+    if (is_array($config)) {
+        return $config;
+    }
+    $path = __DIR__ . DIRECTORY_SEPARATOR . 'config.php';
     if (!is_file($path)) {
-        return;
+        throw new RuntimeException('Missing config.php file with required configuration.');
     }
-    $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    if ($lines === false) {
-        return;
+    $loaded = require $path;
+    if (!is_array($loaded)) {
+        throw new RuntimeException('config.php must return an associative array.');
     }
-    foreach ($lines as $line) {
-        $trimmed = trim($line);
-        if ($trimmed === '' || $trimmed[0] === '#' || $trimmed[0] === ';') {
-            continue;
-        }
-        $pos = strpos($trimmed, '=');
-        if ($pos === false) {
-            continue;
-        }
-        $key = trim(substr($trimmed, 0, $pos));
-        $value = trim(substr($trimmed, $pos + 1));
-        // Remove surrounding quotes if present
-        if ((str_starts_with($value, '"') && str_ends_with($value, '"')) || (str_starts_with($value, "'") && str_ends_with($value, "'"))) {
-            $value = substr($value, 1, -1);
-        }
-        if ($key !== '' && getenv($key) === false && !array_key_exists($key, $_ENV)) {
-            $_ENV[$key] = $value;
-            putenv($key . '=' . $value);
-        }
-    }
+    return $config = $loaded;
+}
+
+function cfg(string $key, mixed $default = null): mixed
+{
+    $conf = getConfig();
+    return array_key_exists($key, $conf) ? $conf[$key] : $default;
 }
 
 // Lightweight file logger. Writes ISO8601 timestamps, level, message, and JSON context.
@@ -67,12 +58,12 @@ function getLogPath(): string
         return $cachedPath;
     }
 
-    $custom = $_ENV['WC_LOG_FILE'] ?? getenv('WC_LOG_FILE');
+    $custom = cfg('WC_LOG_FILE');
     if (is_string($custom) && $custom !== '') {
         return $cachedPath = $custom;
     }
 
-    $dir = $_ENV['WC_LOG_DIR'] ?? getenv('WC_LOG_DIR');
+    $dir = cfg('WC_LOG_DIR');
     if (!is_string($dir) || $dir === '') {
         $dir = __DIR__ . DIRECTORY_SEPARATOR . 'logs';
     }
@@ -95,8 +86,8 @@ function getLogPath(): string
 function safeLog(string $level, string $message, array $context = []): void
 {
     try {
-        $includeRunId = (($_ENV['WC_LOG_INCLUDE_RUN_ID'] ?? getenv('WC_LOG_INCLUDE_RUN_ID') ?? '') === '1');
-        $includeScript = (($_ENV['WC_LOG_INCLUDE_SCRIPT'] ?? getenv('WC_LOG_INCLUDE_SCRIPT') ?? '') === '1');
+        $includeRunId = ((string)cfg('WC_LOG_INCLUDE_RUN_ID', '') === '1');
+        $includeScript = ((string)cfg('WC_LOG_INCLUDE_SCRIPT', '') === '1');
 
         static $runId = null;
         if ($includeRunId && $runId === null) {
@@ -218,23 +209,21 @@ function httpGet(string $url, array $headers = [], int $timeoutSeconds = 30): ar
 // Public function to fetch WooCommerce products based on env config
 function fetchSantehserviceMixersProducts(): array
 {
-    loadEnvFileIfPresent(__DIR__ . '/.env');
-
-    $siteUrl = $_ENV['WC_SITE_URL'] ?? getenv('WC_SITE_URL') ?: '';
-    $username = $_ENV['WC_API_USERNAME'] ?? getenv('WC_API_USERNAME') ?: '';
-    $password = $_ENV['WC_API_PASSWORD'] ?? getenv('WC_API_PASSWORD') ?: '';
-    $perPage  = (int)(($_ENV['WC_PER_PAGE'] ?? getenv('WC_PER_PAGE') ?: 100));
+    $siteUrl = (string)cfg('WC_SITE_URL', '');
+    $username = (string)cfg('WC_API_USERNAME', '');
+    $password = (string)cfg('WC_API_PASSWORD', '');
+    $perPage  = (int)cfg('WC_PER_PAGE', 100);
     if ($perPage <= 0 || $perPage > 100) {
         $perPage = 100;
     }
     if ($siteUrl === '' || $username === '' || $password === '') {
-        throw new RuntimeException('Missing required env vars. Please set WC_SITE_URL, WC_API_USERNAME, WC_API_PASSWORD (and optionally WC_PER_PAGE).');
+        throw new RuntimeException('Missing required config values. Please set WC_SITE_URL, WC_API_USERNAME, WC_API_PASSWORD (and optionally WC_PER_PAGE).');
     }
 
     $parsedUrl = parse_url($siteUrl) ?: [];
     $scheme = isset($parsedUrl['scheme']) ? strtolower((string)$parsedUrl['scheme']) : '';
     $isHttps = ($scheme === 'https');
-    $envForceQueryAuth = ($_ENV['WC_QUERY_STRING_AUTH'] ?? getenv('WC_QUERY_STRING_AUTH') ?? '') === '1';
+    $envForceQueryAuth = ((string)cfg('WC_QUERY_STRING_AUTH', '') === '1');
     $useQueryAuth = (!$isHttps) || $envForceQueryAuth;
 
     $apiBase = rtrim($siteUrl, '/') . '/wp-json/wc/v3/products';
