@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';
+require __DIR__ . '/transform-santehservice-mixers.php';
 
 safeLog('info', 'run start');
 try {
@@ -65,7 +66,7 @@ try {
         exit(3);
     }
 
-    // Dump processed Santehservice products for debugging/inspection
+    // Dump raw Santehservice products for debugging/inspection
     try {
         $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
         if (!is_dir($dumpDir)) {
@@ -80,10 +81,25 @@ try {
     } catch (Throwable $e) {
         safeLog('error', 'santehservice_products_dump_failed', ['error' => $e->getMessage()]);
     }
+
+    // Transform Santehservice products and dump transformed result
+    $santehTransformed = transformSantehserviceMixersProducts($santehProducts);
+    safeLog('info', 'santehservice_products_transformed', [
+        'before' => count($santehProducts),
+        'after' => count($santehTransformed),
+    ]);
+    try {
+        $transformedPath = dumpSantehserviceTransformedProducts($santehTransformed);
+        // Optional debug log already emitted inside dump helper; keep a small confirmation here
+        safeLog('info', 'santehservice_products_transformed_path', ['path' => $transformedPath]);
+    } catch (Throwable $e) {
+        safeLog('error', 'santehservice_products_transformed_dump_failed', ['error' => $e->getMessage()]);
+    }
     
     safeLog('info', 'run complete', [
         'ek_total' => count($products),
         'santeh_total' => isset($santehProducts) ? count($santehProducts) : 0,
+        'santeh_transformed_total' => isset($santehTransformed) ? count($santehTransformed) : 0,
     ]);
     // echo json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
 } catch (Throwable $e) {
