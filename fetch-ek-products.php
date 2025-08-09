@@ -381,7 +381,7 @@ function fetchEkProducts(): array
 
     $apiBase = rtrim($siteUrl, '/') . '/wp-json/wc/v3/products';
 
-    safeLog('info', 'fetch start', ['per_page' => $perPage, 'query_auth' => $useQueryAuth ? 1 : 0]);
+    safeLog('info', 'ek_products_fetch_start', ['per_page' => $perPage, 'query_auth' => $useQueryAuth ? 1 : 0]);
 
     $pageNumber = 1;
     $allProducts = [];
@@ -405,14 +405,14 @@ function fetchEkProducts(): array
                 $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
             }
 
-            safeLog('info', 'request', ['page' => $pageNumber]);
+            safeLog('info', 'ek_products_request', ['page' => $pageNumber]);
             [, $body] = httpGet($url, $headers, 60);
             $decoded = json_decode($body, true);
             if (!is_array($decoded)) {
                 throw new RuntimeException('Unexpected response format');
             }
             $count = count($decoded);
-            safeLog('info', 'page_fetched', ['page' => $pageNumber, 'items' => $count]);
+            safeLog('info', 'ek_products_page_fetched', ['page' => $pageNumber, 'items' => $count]);
             if ($count > 0) {
                 $allProducts = array_merge($allProducts, $decoded);
             }
@@ -423,7 +423,7 @@ function fetchEkProducts(): array
         throw $e;
     }
 
-    safeLog('info', 'fetch complete', ['total' => count($allProducts)]);
+    safeLog('info', 'ek_products_fetch_complete', ['total' => count($allProducts)]);
 
     // Keep only products from the desired category (default: 121)
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
@@ -434,7 +434,7 @@ function fetchEkProducts(): array
         }
     ));
 
-    safeLog('info', 'filter applied', [
+    safeLog('info', 'ek_products_filter_applied', [
         'category_id' => $categoryId,
         'before' => count($allProducts),
         'after' => count($filteredProducts),
