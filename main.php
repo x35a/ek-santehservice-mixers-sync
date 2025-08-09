@@ -84,6 +84,9 @@ try {
 
     // Transform Santehservice products and dump transformed result
     $santehTransformed = transformSantehserviceMixersProducts($santehProducts);
+    // Limit transformed array to at most 3 items
+    $santehTransformed = array_slice($santehTransformed, 0, 3); // TODO remove later
+    
     safeLog('info', 'santehservice_products_transformed', [
         'before' => count($santehProducts),
         'after' => count($santehTransformed),
@@ -101,7 +104,7 @@ try {
         'santeh_total' => isset($santehProducts) ? count($santehProducts) : 0,
         'santeh_transformed_total' => isset($santehTransformed) ? count($santehTransformed) : 0,
     ]);
-    // echo json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+
 } catch (Throwable $e) {
     safeLog('error', 'run failed', ['error' => $e->getMessage()]);
     // Send alert email on exception
