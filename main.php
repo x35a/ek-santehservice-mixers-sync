@@ -4,13 +4,13 @@ declare(strict_types=1);
 require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';
 require __DIR__ . '/transform-santehservice-mixers.php';
-require __DIR__ . '/find-new-products.php';
+require __DIR__ . '/find-new-mixers.php';
 
 safeLog('info', 'run start');
 try {
-    $products = fetchEkProducts();
+    $ekMixers = fetchEkProducts();
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
-    if (empty($products)) {
+    if (empty($ekMixers)) {
         safeLog('info', 'run terminated', [
             'reason' => 'no products found for required category',
             'category_id' => $categoryId,
@@ -36,7 +36,7 @@ try {
             @mkdir($dumpDir, 0777, true);
         }
         $ekDumpPath = $dumpDir . DIRECTORY_SEPARATOR . 'ek-products.json';
-        $ekJson = json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $ekJson = json_encode($ekMixers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (is_string($ekJson)) {
             @file_put_contents($ekDumpPath, $ekJson . PHP_EOL);
             safeLog('info', 'ek_products_dumped', ['path' => $ekDumpPath, 'bytes' => strlen($ekJson)]);
@@ -47,9 +47,9 @@ try {
 
 
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
-    $santehProducts = fetchSantehserviceMixersProductsFromXml();
-    safeLog('info', 'santehservice_products_loaded', ['total' => count($santehProducts)]);
-    if (empty($santehProducts)) {
+    $santehMixers = fetchSantehserviceMixersProductsFromXml();
+    safeLog('info', 'santehservice_products_loaded', ['total' => count($santehMixers)]);
+    if (empty($santehMixers)) {
         safeLog('error', 'santehservice_xml_empty', [
             'reason' => 'no offers returned',
             'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
@@ -74,7 +74,7 @@ try {
             @mkdir($dumpDir, 0777, true);
         }
         $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . 'santehservice-products.json';
-        $json = json_encode($santehProducts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = json_encode($santehMixers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (is_string($json)) {
             @file_put_contents($dumpPath, $json . PHP_EOL);
             safeLog('info', 'santehservice_products_dumped', ['path' => $dumpPath, 'bytes' => strlen($json)]);
@@ -84,34 +84,34 @@ try {
     }
 
     // Transform Santehservice products and dump transformed result
-    $santehTransformed = transformSantehserviceMixersProducts($santehProducts);
+    $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
     // Limit transformed array to at most 3 items
-    $santehTransformed = array_slice($santehTransformed, 0, 3); // TODO remove later
+    $santehMixersTransformed = array_slice($santehMixersTransformed, 0, 3); // TODO remove later
     
     safeLog('info', 'santehservice_products_transformed', [
-        'before' => count($santehProducts),
-        'after' => count($santehTransformed),
+        'before' => count($santehMixers),
+        'after' => count($santehMixersTransformed),
     ]);
     try {
-        $transformedPath = dumpSantehserviceTransformedProducts($santehTransformed);
+        $transformedPath = dumpSantehserviceTransformedProducts($santehMixersTransformed);
         // Optional debug log already emitted inside dump helper; keep a small confirmation here
         safeLog('info', 'santehservice_products_transformed_path', ['path' => $transformedPath]);
     } catch (Throwable $e) {
         safeLog('error', 'santehservice_products_transformed_dump_failed', ['error' => $e->getMessage()]);
     }
 
-    // take $santehTransformed array and use as input and run find-new-products.php
+    // take $santehMixersTransformed array and use as input and run find-new-mixers.php
     try {
-        $newProductsJsonPath = runFindNewProducts($santehTransformed, $products);
+        $newProductsJsonPath = runFindNewProducts($santehMixersTransformed, $ekMixers);
         safeLog('info', 'new_products_json_generated', ['path' => $newProductsJsonPath]);
     } catch (Throwable $e) {
         safeLog('error', 'runFindNewProducts_failed', ['error' => $e->getMessage()]);
     }
     
     safeLog('info', 'run complete', [
-        'ek_total' => count($products),
-        'santeh_total' => isset($santehProducts) ? count($santehProducts) : 0,
-        'santeh_transformed_total' => isset($santehTransformed) ? count($santehTransformed) : 0,
+        'ek_total' => count($ekMixers),
+        'santeh_total' => isset($santehMixers) ? count($santehMixers) : 0,
+        'santeh_transformed_total' => isset($santehMixersTransformed) ? count($santehMixersTransformed) : 0,
     ]);
 
 } catch (Throwable $e) {
