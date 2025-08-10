@@ -359,6 +359,38 @@ function productHasCategoryId(array $product, int $categoryId): bool
     return false;
 }
 
+/**
+ * Dump EK products to data-example directory.
+ * Returns absolute path to the written file.
+ *
+ * @param array<int, array<string, mixed>> $ekProducts
+ * @param string|null $dumpFilename Optional custom filename (defaults to ek-products.json)
+ * @return string
+ */
+function dumpEkProducts(array $ekProducts, ?string $dumpFilename = null): string
+{
+    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
+    if (!is_dir($dumpDir)) {
+        @mkdir($dumpDir, 0777, true);
+    }
+
+    $filename = $dumpFilename ?? 'ek-products.json';
+    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
+
+    $json = json_encode($ekProducts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (is_string($json)) {
+        @file_put_contents($dumpPath, $json . PHP_EOL);
+        if (function_exists('safeLog')) {
+            safeLog('info', 'ek_products_dumped', [
+                'path' => $dumpPath,
+                'bytes' => strlen($json),
+            ]);
+        }
+    }
+
+    return $dumpPath;
+}
+
 // Public function to fetch WooCommerce products based on env config
 function fetchEkProducts(): array
 {
@@ -439,7 +471,15 @@ function fetchEkProducts(): array
         'before' => count($allProducts),
         'after' => count($filteredProducts),
     ]);
-
+    
+    // Dump processed EK products for debugging/inspection
+    try {
+        $ekDumpPath = dumpEkProducts($filteredProducts);
+        safeLog('info', 'ek_products_dump_path', ['path' => $ekDumpPath]);
+    } catch (Throwable $e) {
+        safeLog('error', 'ek_products_dump_failed', ['error' => $e->getMessage()]);
+    }
+    
     return $filteredProducts;
 }
 
