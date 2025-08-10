@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require __DIR__ . '/logging.php';
 require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';
 require __DIR__ . '/transform-santehservice-mixers.php';
