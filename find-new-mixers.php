@@ -100,6 +100,13 @@ function buildWooBatchCreatePayload(array $santehTransformed, array $ekSkuLookup
         if (isset($ekSkuLookup[$sku])) {
             continue; // already exists on EK
         }
+        // Log each newly discovered mixer by SKU
+        if (function_exists('safeLog')) {
+            safeLog('info', 'find_new_mixers_new_mixer_found', [
+                'message' => "new mixer found - SKU: {$sku}",
+                'sku' => $sku,
+            ]);
+        }
         $create[] = mapSantehToWooCreate($sProd, $categoryId);
     }
     return ['create' => $create];
@@ -127,7 +134,7 @@ function dumpNewProductsPayload(array $payload, ?string $dumpFilename = null): s
     if (is_string($json)) {
         @file_put_contents($dumpPath, $json . PHP_EOL);
         if (function_exists('safeLog')) {
-            safeLog('info', 'new_products_payload_dumped', [
+            safeLog('info', 'find_new_mixers_new_products_payload_dumped', [
                 'path' => $dumpPath,
                 'bytes' => strlen($json),
                 'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
@@ -155,7 +162,7 @@ function runFindNewProducts(array $santehTransformed, array $ekProducts): string
     $dumpPath = dumpNewProductsPayload($payload);
 
     if (function_exists('safeLog')) {
-        safeLog('info', 'find_new_products_complete', [
+        safeLog('info', 'find_new_mixers_complete', [
             'ek_total' => count($ekProducts),
             'santeh_transformed_total' => count($santehTransformed),
             'new_products' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
