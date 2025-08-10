@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';
 require __DIR__ . '/transform-santehservice-mixers.php';
+require __DIR__ . '/find-new-products.php';
 
 safeLog('info', 'run start');
 try {
@@ -97,6 +98,14 @@ try {
         safeLog('info', 'santehservice_products_transformed_path', ['path' => $transformedPath]);
     } catch (Throwable $e) {
         safeLog('error', 'santehservice_products_transformed_dump_failed', ['error' => $e->getMessage()]);
+    }
+
+    // take $santehTransformed array and use as input and run find-new-products.php
+    try {
+        $newProductsJsonPath = runFindNewProducts($santehTransformed, $products);
+        safeLog('info', 'new_products_json_generated', ['path' => $newProductsJsonPath]);
+    } catch (Throwable $e) {
+        safeLog('error', 'runFindNewProducts_failed', ['error' => $e->getMessage()]);
     }
     
     safeLog('info', 'run complete', [

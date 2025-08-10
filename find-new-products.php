@@ -1,10 +1,5 @@
 <?php
 declare(strict_types=1);
-
-require __DIR__ . '/fetch-ek-products.php';
-require __DIR__ . '/fetch-santehservice-mixers.php';
-require __DIR__ . '/transform-santehservice-mixers.php';
-
 /**
  * Build a lookup set of existing EK product SKUs for fast membership checks.
  *
@@ -143,32 +138,32 @@ function dumpNewProductsPayload(array $payload, ?string $dumpFilename = null): s
     return $dumpPath;
 }
 
-// If this file is executed directly, perform the discovery and dump workflow.
-try {
-    $ekProducts = fetchEkProducts();
+/**
+ * Execute new-products discovery using provided Santehservice transformed array.
+ * Returns absolute path of the dumped JSON payload.
+ *
+ * @param array<int, array<string, mixed>> $santehTransformed
+ * @return string
+ */
+function runFindNewProducts(array $santehTransformed, array $ekProducts): string
+{
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
-
-    $santehProducts = fetchSantehserviceMixersProductsFromXml();
-    $santehTransformed = transformSantehserviceMixersProducts($santehProducts);
 
     $ekSkuLookup = buildEkSkuLookup($ekProducts);
     $payload = buildWooBatchCreatePayload($santehTransformed, $ekSkuLookup, $categoryId);
 
-    dumpNewProductsPayload($payload);
+    $dumpPath = dumpNewProductsPayload($payload);
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_new_products_complete', [
             'ek_total' => count($ekProducts),
             'santeh_transformed_total' => count($santehTransformed),
             'new_products' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
+            'dump_path' => $dumpPath,
         ]);
     }
-} catch (Throwable $e) {
-    if (function_exists('safeLog')) {
-        safeLog('error', 'find_new_products_failed', ['error' => $e->getMessage()]);
-    }
-    // Best-effort error surface when running from CLI
-    fwrite(STDERR, 'find-new-products error: ' . $e->getMessage() . PHP_EOL);
+
+    return $dumpPath;
 }
 
 
