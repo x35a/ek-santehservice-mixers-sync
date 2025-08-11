@@ -28,13 +28,9 @@ function fetchSantehserviceMixersProductsFromXml(): array
     $products = parseSantehserviceMixersXmlToArray($xmlBody);
     safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
     
-    // Dump raw Santehservice products for debugging/inspection (analogous to EK dump)
-    try {
-        $dumpPath = dumpSantehserviceProducts($products);
-        safeLog('info', 'santehservice_products_dump_path', ['path' => $dumpPath]);
-    } catch (Throwable $e) {
-        safeLog('error', 'santehservice_products_dump_failed', ['error' => $e->getMessage()]);
-    }
+    // Dump raw Santehservice products
+    dumpSantehserviceProducts($products);
+
     return $products;
 }
 
@@ -177,21 +173,46 @@ function dumpSantehserviceProducts(array $products, ?string $dumpFilename = null
 {
     $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
     if (!is_dir($dumpDir)) {
-        @mkdir($dumpDir, 0777, true);
+        if (!@mkdir($dumpDir, 0777, true)) {
+            if (function_exists('safeLog')) {
+                safeLog('error', 'santehservice_products_dump_failed', [
+                    'error' => 'Failed to create directory',
+                    'path' => $dumpDir
+                ]);
+            }
+            return '';
+        }
     }
 
     $filename = $dumpFilename ?? 'santehservice-products.json';
     $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
 
     $json = json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (is_string($json)) {
-        @file_put_contents($dumpPath, $json . PHP_EOL);
+    if (!is_string($json)) {
         if (function_exists('safeLog')) {
-            safeLog('info', 'santehservice_products_dumped', [
-                'path' => $dumpPath,
-                'bytes' => strlen($json),
+            safeLog('error', 'santehservice_products_dump_failed', [
+                'error' => 'Failed to encode products to JSON'
             ]);
         }
+        return '';
+    }
+
+    $bytes = @file_put_contents($dumpPath, $json . PHP_EOL);
+    if ($bytes === false) {
+        if (function_exists('safeLog')) {
+            safeLog('error', 'santehservice_products_dump_failed', [
+                'error' => 'Failed to write to file',
+                'path' => $dumpPath
+            ]);
+        }
+        return '';
+    }
+
+    if (function_exists('safeLog')) {
+        safeLog('info', 'santehservice_products_dumped', [
+            'path' => $dumpPath,
+            'bytes' => $bytes,
+        ]);
     }
 
     return $dumpPath;
