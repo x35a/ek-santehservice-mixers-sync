@@ -69,15 +69,6 @@ function parseSantehserviceMixersXmlToArray(string $xmlBody): array
         $result[] = santehserviceOfferToArray($offer);
     }
     
-    // Check if we got any offers after parsing
-    if (empty($result)) {
-        safeLog('error', 'santehservice_xml_no_offers', [
-            'reason' => 'XML structure is correct but no offers found',
-            'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
-        ]);
-        throw new RuntimeException('XML structure is correct but no offers found in the feed');
-    }
-    
     return $result;
 }
 
