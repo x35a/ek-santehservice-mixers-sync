@@ -156,42 +156,42 @@ function fetchEkProducts(): array
     $pageNumber = 1;
     $allProducts = [];
 
-    try {
-        do {
-            $query = [
-                'per_page' => $perPage,
-                'page' => $pageNumber,
-            ];
-            if ($useQueryAuth) {
-                $query['consumer_key'] = $username;
-                $query['consumer_secret'] = $password;
-            }
-            $url = $apiBase . '?' . http_build_query($query);
+    do {
+        $query = [
+            'per_page' => $perPage,
+            'page' => $pageNumber,
+        ];
+        if ($useQueryAuth) {
+            $query['consumer_key'] = $username;
+            $query['consumer_secret'] = $password;
+        }
+        $url = $apiBase . '?' . http_build_query($query);
 
-            $headers = [
-                'Accept: application/json',
-            ];
-            if (!$useQueryAuth) {
-                $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
-            }
+        $headers = [
+            'Accept: application/json',
+        ];
+        if (!$useQueryAuth) {
+            $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
+        }
 
-            safeLog('info', 'ek_products_request', ['page' => $pageNumber]);
-            [, $body] = httpGet($url, $headers, 60);
-            $decoded = json_decode($body, true);
-            if (!is_array($decoded)) {
-                throw new RuntimeException('Unexpected response format');
-            }
-            $count = count($decoded);
-            safeLog('info', 'ek_products_page_fetched', ['page' => $pageNumber, 'items' => $count]);
-            if ($count > 0) {
-                $allProducts = array_merge($allProducts, $decoded);
-            }
-            $pageNumber++;
-        } while ($count === $perPage);
-    } catch (Throwable $e) {
-        safeLog('error', 'fetch failed', ['page' => $pageNumber, 'error' => $e->getMessage()]);
-        throw $e;
-    }
+        safeLog('info', 'ek_products_request', ['page' => $pageNumber]);
+        [, $body] = httpGet($url, $headers, 60);
+        $decoded = json_decode($body, true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException(sprintf(
+                'Unexpected response format on page %d. Expected array, got %s. Response: %s',
+                $pageNumber,
+                gettype($decoded),
+                substr($body, 0, 200) . (strlen($body) > 200 ? '...' : '')
+            ));
+        }
+        $count = count($decoded);
+        safeLog('info', 'ek_products_page_fetched', ['page' => $pageNumber, 'items' => $count]);
+        if ($count > 0) {
+            $allProducts = array_merge($allProducts, $decoded);
+        }
+        $pageNumber++;
+    } while ($count === $perPage);
 
     safeLog('info', 'ek_products_fetch_complete', ['total' => count($allProducts)]);
 
