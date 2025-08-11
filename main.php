@@ -18,24 +18,6 @@ safeLog('info', 'run start');
 try {
     $ekMixers = fetchEkProducts();
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
-    // if (empty($ekMixers)) {
-    //     safeLog('info', 'run terminated', [
-    //         'reason' => 'no products found for required category',
-    //         'category_id' => $categoryId,
-    //     ]);
-    //     // Alert on non-standard termination (no products)
-    //     $subject = buildAlertSubject('Non-standard Termination');
-    //     $body = "The sync run terminated without products for the required category.\n\n" . json_encode([
-    //         'reason' => 'no products found for required category',
-    //         'category_id' => $categoryId,
-    //     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
-    //     $log = getCurrentLogContents();
-    //     if ($log !== '') {
-    //         $body .= "--- Log ---\n" . $log;
-    //     }
-    //     sendAlertEmail($subject, $body);
-    //     exit(2);
-    // }
 
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
     $santehMixers = fetchSantehserviceMixersProductsFromXml();

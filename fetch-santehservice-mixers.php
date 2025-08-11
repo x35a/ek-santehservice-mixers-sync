@@ -27,6 +27,7 @@ function fetchSantehserviceMixersProductsFromXml(): array
     [, $xmlBody] = httpGet($url, $headers, 60);
     $products = parseSantehserviceMixersXmlToArray($xmlBody);
     safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
+    
     // Dump raw Santehservice products for debugging/inspection (analogous to EK dump)
     try {
         $dumpPath = dumpSantehserviceProducts($products);
