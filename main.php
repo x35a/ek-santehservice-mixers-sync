@@ -57,7 +57,7 @@ try {
         exit(3);
     }
 
-    // Transform Santehservice products and dump transformed result
+    // Transform Santehservice products (dumping now happens inside transformer)
     $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
     // Limit transformed array to at most 3 items
     $santehMixersTransformed = array_slice($santehMixersTransformed, 0, 3); // TODO remove later
@@ -66,13 +66,7 @@ try {
         'before' => count($santehMixers),
         'after' => count($santehMixersTransformed),
     ]);
-    try {
-        $transformedPath = dumpSantehserviceTransformedProducts($santehMixersTransformed);
-        // Optional debug log already emitted inside dump helper; keep a small confirmation here
-        safeLog('info', 'santehservice_products_transformed_path', ['path' => $transformedPath]);
-    } catch (Throwable $e) {
-        safeLog('error', 'santehservice_products_transformed_dump_failed', ['error' => $e->getMessage()]);
-    }
+    
 
     // take $santehMixersTransformed array and use as input and run find-new-mixers.php
     $newProductsJsonPath = runFindNewProducts($santehMixersTransformed, $ekMixers);

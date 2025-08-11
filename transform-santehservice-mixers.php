@@ -116,6 +116,9 @@ function transformSantehserviceMixersProducts(
         $result[] = $product;
     }
 
+    // Dump transformed products (logging happens inside the function)
+    dumpSantehserviceTransformedProducts($result);
+
     return $result;
 }
 
@@ -130,22 +133,45 @@ function transformSantehserviceMixersProducts(
 function dumpSantehserviceTransformedProducts(array $transformedProducts, ?string $dumpFilename = null): string
 {
     $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) {
-        @mkdir($dumpDir, 0777, true);
+    if (!is_dir($dumpDir) && !@mkdir($dumpDir, 0777, true)) {
+        if (function_exists('safeLog')) {
+            safeLog('error', 'santehservice_products_dump_failed', [
+                'error' => 'Failed to create directory',
+                'path' => $dumpDir
+            ]);
+        }
+        return '';
     }
 
     $filename = $dumpFilename ?? 'santehservice-products-transformed.json';
     $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
 
     $json = json_encode($transformedProducts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (is_string($json)) {
-        @file_put_contents($dumpPath, $json . PHP_EOL);
+    if (!is_string($json)) {
         if (function_exists('safeLog')) {
-            safeLog('info', 'santehservice_products_transformed_dumped', [
-                'path' => $dumpPath,
-                'bytes' => strlen($json),
+            safeLog('error', 'santehservice_products_dump_failed', [
+                'error' => 'Failed to encode products to JSON'
             ]);
         }
+        return '';
+    }
+
+    $bytes = @file_put_contents($dumpPath, $json . PHP_EOL);
+    if ($bytes === false) {
+        if (function_exists('safeLog')) {
+            safeLog('error', 'santehservice_products_dump_failed', [
+                'error' => 'Failed to write to file',
+                'path' => $dumpPath
+            ]);
+        }
+        return '';
+    }
+
+    if (function_exists('safeLog')) {
+        safeLog('info', 'santehservice_products_dump_created', [
+            'path' => $dumpPath,
+            'bytes' => $bytes
+        ]);
     }
 
     return $dumpPath;
