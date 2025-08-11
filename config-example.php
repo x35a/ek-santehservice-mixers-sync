@@ -40,7 +40,7 @@ return [
     'ALERT_EMAIL_FROM_NAME' => '',
 
     // Optional – email-адреса відправника. Якщо не вказано, буде використано no-reply@<домен_сайту>
-    // 'ALERT_EMAIL_FROM_EMAIL' => 'noreply@ekoplast.org',
+    // 'ALERT_EMAIL_FROM_EMAIL' => 'noreply@example.com',
 
     // Santehservice XML feed URL (set the real URL here in your config.php)
     'SANTEHSERVICE_XML_URL' => '',
