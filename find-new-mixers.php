@@ -129,7 +129,7 @@ function dumpNewProductsPayload(array $payload, ?string $dumpFilename = null): s
         @mkdir($dumpDir, 0777, true);
     }
 
-    $filename = $dumpFilename ?? 'wc-batch-create-new-products.json';
+    $filename = $dumpFilename ?? 'create-new-products-json-request.json';
     $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
 
     $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
