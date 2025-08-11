@@ -7,6 +7,7 @@ require __DIR__ . '/fetch-santehservice-mixers.php';
 require __DIR__ . '/transform-santehservice-mixers.php';
 require __DIR__ . '/find-new-mixers.php';
 require __DIR__ . '/find-outofstock-mixers.php';
+require __DIR__ . '/find-outdated-mixers.php';
 
 safeLog('info', 'run start');
 try {
@@ -82,6 +83,14 @@ try {
         safeLog('info', 'outofstock_products_json_generated', ['path' => $outOfStockJsonPath]);
     } catch (Throwable $e) {
         safeLog('error', 'runFindOutOfStockProducts_failed', ['error' => $e->getMessage()]);
+    }
+
+    // After out-of-stock, find outdated mixers (name/description/price diffs) and dump JSON payload
+    try {
+        $outdatedJsonPath = runFindOutdatedMixers($ekMixers, $santehMixersTransformed);
+        safeLog('info', 'outdated_products_json_generated', ['path' => $outdatedJsonPath]);
+    } catch (Throwable $e) {
+        safeLog('error', 'runFindOutdatedMixers_failed', ['error' => $e->getMessage()]);
     }
 
     safeLog('info', 'run complete', [
