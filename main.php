@@ -6,6 +6,7 @@ require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';
 require __DIR__ . '/transform-santehservice-mixers.php';
 require __DIR__ . '/find-new-mixers.php';
+require __DIR__ . '/find-outofstock-mixers.php';
 
 safeLog('info', 'run start');
 try {
@@ -51,8 +52,6 @@ try {
         exit(3);
     }
 
-    
-
     // Transform Santehservice products and dump transformed result
     $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
     // Limit transformed array to at most 3 items
@@ -77,7 +76,14 @@ try {
     } catch (Throwable $e) {
         safeLog('error', 'runFindNewProducts_failed', ['error' => $e->getMessage()]);
     }
-    
+    // After finding new products, find out-of-stock mixers and dump JSON payload
+    try {
+        $outOfStockJsonPath = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
+        safeLog('info', 'outofstock_products_json_generated', ['path' => $outOfStockJsonPath]);
+    } catch (Throwable $e) {
+        safeLog('error', 'runFindOutOfStockProducts_failed', ['error' => $e->getMessage()]);
+    }
+
     safeLog('info', 'run complete', [
         'ek_total' => count($ekMixers),
         'santeh_total' => isset($santehMixers) ? count($santehMixers) : 0,
