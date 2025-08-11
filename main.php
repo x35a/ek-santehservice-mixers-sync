@@ -9,6 +9,7 @@ require __DIR__ . '/find-new-mixers.php';
 require __DIR__ . '/find-outofstock-mixers.php';
 require __DIR__ . '/find-outdated-mixers.php';
 require __DIR__ . '/batch-update-merge-payloads.php';
+require __DIR__ . '/batch-update-send-request.php';
 
 safeLog('info', 'run start');
 try {
@@ -104,6 +105,20 @@ try {
         safeLog('info', 'batch_update_json_generated', ['path' => $batchPath]);
     } catch (Throwable $e) {
         safeLog('error', 'runBatchUpdateMixers_failed', ['error' => $e->getMessage()]);
+    }
+
+    // Send the batch request to WooCommerce and dump server response
+    try {
+        if (isset($batchPath) && is_string($batchPath) && $batchPath !== '') {
+            $serverResponsePath = runBatchUpdateSendRequest($batchPath);
+            if ($serverResponsePath !== '') {
+                safeLog('info', 'batch_update_server_response_dump_path', ['path' => $serverResponsePath]);
+            }
+        } else {
+            safeLog('warning', 'batch_update_send_skipped', ['reason' => 'no batch payload path available']);
+        }
+    } catch (Throwable $e) {
+        safeLog('error', 'runBatchUpdateSendRequest_failed', ['error' => $e->getMessage()]);
     }
 
     safeLog('info', 'run complete', [
