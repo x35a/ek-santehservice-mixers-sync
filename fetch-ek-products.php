@@ -25,53 +25,7 @@ function cfg(string $key, mixed $default = null): mixed
     return array_key_exists($key, $conf) ? $conf[$key] : $default;
 }
 
-// Compose and send an alert email. Safe to call from error/shutdown handlers.
-function sendAlertEmail(string $subject, string $body): bool
-{
-    try {
-        $to = (string)cfg('ALERT_EMAIL_TO', '');
-        if ($to === '') {
-            return false; // alerts disabled
-        }
-
-        $fromName  = (string)cfg('ALERT_EMAIL_FROM_NAME', 'EK Santehservice Sync');
-        $fromEmail = (string)cfg('ALERT_EMAIL_FROM_EMAIL', '');
-
-        if ($fromEmail === '') {
-            // Derive a safe default like no-reply@<host>
-            $host = parse_url((string)cfg('WC_SITE_URL', ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
-            $host = is_string($host) && $host !== '' ? $host : 'localhost';
-            $fromEmail = 'no-reply@' . $host;
-        }
-
-        $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
-        $headers = [
-            'MIME-Version: 1.0',
-            'Content-Type: text/plain; charset=UTF-8',
-            'From: ' . $encodedFromName . ' <' . $fromEmail . '>',
-            'Reply-To: ' . $fromEmail,
-        ];
-
-        // Best-effort: avoid very long lines in body
-        $wrappedBody = wordwrap($body, 998, "\n", true);
-
-        // mail() can fail silently in some environments; return its boolean result
-        $result = @mail($to, $subject, $wrappedBody, implode("\r\n", $headers));
-        return (bool)$result;
-    } catch (Throwable $e) {
-        // Avoid throwing from alert sender
-        return false;
-    }
-}
-
-// Build a default alert email subject
-function buildAlertSubject(string $kind = 'Error'): string
-{
-    $host = parse_url((string)cfg('WC_SITE_URL', ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    $host = is_string($host) && $host !== '' ? $host : 'localhost';
-    $script = basename($_SERVER['SCRIPT_FILENAME'] ?? __FILE__);
-    return sprintf('[Mixers Sync] %s in %s on %s', $kind, $script, $host);
-}
+// sendAlertEmail() and buildAlertSubject() are provided by send-email.php
 
 // Register global error/exception/shutdown handlers that will log and alert
 set_error_handler(static function (int $severity, string $message, ?string $file = null, ?int $line = null): bool {
