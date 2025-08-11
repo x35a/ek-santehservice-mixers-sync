@@ -8,29 +8,30 @@ require __DIR__ . '/transform-santehservice-mixers.php';
 require __DIR__ . '/find-new-mixers.php';
 require __DIR__ . '/find-outofstock-mixers.php';
 require __DIR__ . '/find-outdated-mixers.php';
+require __DIR__ . '/batch-update-merge-payloads.php';
 
 safeLog('info', 'run start');
 try {
     $ekMixers = fetchEkProducts();
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
-    if (empty($ekMixers)) {
-        safeLog('info', 'run terminated', [
-            'reason' => 'no products found for required category',
-            'category_id' => $categoryId,
-        ]);
-        // Alert on non-standard termination (no products)
-        $subject = buildAlertSubject('Non-standard Termination');
-        $body = "The sync run terminated without products for the required category.\n\n" . json_encode([
-            'reason' => 'no products found for required category',
-            'category_id' => $categoryId,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
-        $log = getCurrentLogContents();
-        if ($log !== '') {
-            $body .= "--- Log ---\n" . $log;
-        }
-        sendAlertEmail($subject, $body);
-        exit(2);
-    }
+    // if (empty($ekMixers)) {
+    //     safeLog('info', 'run terminated', [
+    //         'reason' => 'no products found for required category',
+    //         'category_id' => $categoryId,
+    //     ]);
+    //     // Alert on non-standard termination (no products)
+    //     $subject = buildAlertSubject('Non-standard Termination');
+    //     $body = "The sync run terminated without products for the required category.\n\n" . json_encode([
+    //         'reason' => 'no products found for required category',
+    //         'category_id' => $categoryId,
+    //     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+    //     $log = getCurrentLogContents();
+    //     if ($log !== '') {
+    //         $body .= "--- Log ---\n" . $log;
+    //     }
+    //     sendAlertEmail($subject, $body);
+    //     exit(2);
+    // }
 
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
     $santehMixers = fetchSantehserviceMixersProductsFromXml();
@@ -91,6 +92,18 @@ try {
         safeLog('info', 'outdated_products_json_generated', ['path' => $outdatedJsonPath]);
     } catch (Throwable $e) {
         safeLog('error', 'runFindOutdatedMixers_failed', ['error' => $e->getMessage()]);
+    }
+
+    // Build combined batch payload and dump it
+    try {
+        $batchPath = runBatchUpdateMixers(
+            $newProductsJsonPath ?? '',
+            $outOfStockJsonPath ?? '',
+            $outdatedJsonPath ?? ''
+        );
+        safeLog('info', 'batch_update_json_generated', ['path' => $batchPath]);
+    } catch (Throwable $e) {
+        safeLog('error', 'runBatchUpdateMixers_failed', ['error' => $e->getMessage()]);
     }
 
     safeLog('info', 'run complete', [
