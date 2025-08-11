@@ -75,67 +75,47 @@ try {
     }
 
     // take $santehMixersTransformed array and use as input and run find-new-mixers.php
-    try {
-        $newProductsJsonPath = runFindNewProducts($santehMixersTransformed, $ekMixers);
-        safeLog('info', 'new_products_json_generated', ['path' => $newProductsJsonPath]);
-    } catch (Throwable $e) {
-        safeLog('error', 'runFindNewProducts_failed', ['error' => $e->getMessage()]);
-    }
+    $newProductsJsonPath = runFindNewProducts($santehMixersTransformed, $ekMixers);
+    safeLog('info', 'new_products_json_generated', ['path' => $newProductsJsonPath]);
     // After finding new products, find out-of-stock mixers and dump JSON payload
-    try {
-        $outOfStockJsonPath = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
-        safeLog('info', 'outofstock_products_json_generated', ['path' => $outOfStockJsonPath]);
-    } catch (Throwable $e) {
-        safeLog('error', 'runFindOutOfStockProducts_failed', ['error' => $e->getMessage()]);
-    }
+    $outOfStockJsonPath = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
+    safeLog('info', 'outofstock_products_json_generated', ['path' => $outOfStockJsonPath]);
 
     // After out-of-stock, find outdated mixers (name/description/price diffs) and dump JSON payload
-    try {
-        $outdatedJsonPath = runFindOutdatedMixers($ekMixers, $santehMixersTransformed);
-        safeLog('info', 'outdated_products_json_generated', ['path' => $outdatedJsonPath]);
-    } catch (Throwable $e) {
-        safeLog('error', 'runFindOutdatedMixers_failed', ['error' => $e->getMessage()]);
-    }
+    $outdatedJsonPath = runFindOutdatedMixers($ekMixers, $santehMixersTransformed);
+    safeLog('info', 'outdated_products_json_generated', ['path' => $outdatedJsonPath]);
 
     // Build combined batch payload and dump it
-    try {
-        $batchPayload = runBatchUpdateMixers(
-            $newProductsJsonPath ?? '',
-            $outOfStockJsonPath ?? '',
-            $outdatedJsonPath ?? ''
-        );
-        safeLog('info', 'batch_update_json_generated', [
-            'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
-            'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
-        ]);
-    } catch (Throwable $e) {
-        safeLog('error', 'runBatchUpdateMixers_failed', ['error' => $e->getMessage()]);
-    }
+    $batchPayload = runBatchUpdateMixers(
+        $newProductsJsonPath ?? '',
+        $outOfStockJsonPath ?? '',
+        $outdatedJsonPath ?? ''
+    );
+    safeLog('info', 'batch_update_json_generated', [
+        'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
+        'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
+    ]);
 
     // Send the batch request to WooCommerce and dump server response
-    try {
-        if (isset($batchPayload) && is_array($batchPayload)) {
-            $create = $batchPayload['create'] ?? [];
-            $update = $batchPayload['update'] ?? [];
-            $hasNonEmpty = (is_array($create) && count($create) > 0) || (is_array($update) && count($update) > 0);
+    if (isset($batchPayload) && is_array($batchPayload)) {
+        $create = $batchPayload['create'] ?? [];
+        $update = $batchPayload['update'] ?? [];
+        $hasNonEmpty = (is_array($create) && count($create) > 0) || (is_array($update) && count($update) > 0);
 
-            if (!$hasNonEmpty) {
-                safeLog('info', 'batch_update_send_skipped', [
-                    'reason' => 'batch has only empty arrays',
-                    'create_count' => is_array($create) ? count($create) : 0,
-                    'update_count' => is_array($update) ? count($update) : 0,
-                ]);
-            } else {
-                $serverResponsePath = runBatchUpdateSendRequest($batchPayload);
-                if ($serverResponsePath !== '') {
-                    safeLog('info', 'batch_update_server_response_dump_path', ['path' => $serverResponsePath]);
-                }
-            }
+        if (!$hasNonEmpty) {
+            safeLog('info', 'batch_update_send_skipped', [
+                'reason' => 'batch has only empty arrays',
+                'create_count' => is_array($create) ? count($create) : 0,
+                'update_count' => is_array($update) ? count($update) : 0,
+            ]);
         } else {
-            safeLog('warning', 'batch_update_send_skipped', ['reason' => 'no batch payload available']);
+            $serverResponsePath = runBatchUpdateSendRequest($batchPayload);
+            if ($serverResponsePath !== '') {
+                safeLog('info', 'batch_update_server_response_dump_path', ['path' => $serverResponsePath]);
+            }
         }
-    } catch (Throwable $e) {
-        safeLog('error', 'runBatchUpdateSendRequest_failed', ['error' => $e->getMessage()]);
+    } else {
+        safeLog('warning', 'batch_update_send_skipped', ['reason' => 'no batch payload available']);
     }
 
     safeLog('info', 'run complete', [
