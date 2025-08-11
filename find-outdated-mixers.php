@@ -37,6 +37,7 @@ function normText(?string $s): string
  * Rules:
  * - Compare name (ek.name vs santeh.name), use santeh value if differs
  * - Compare price (ek.regular_price vs santeh.price), use santeh price as regular_price if differs
+ * - If santeh.available === true and ek.stock_status === 'outofstock', set stock_status to 'instock'
  *
  * @param array<string, mixed> $ek
  * @param array<string, mixed> $santeh
@@ -53,6 +54,8 @@ function buildOutdatedUpdateForOne(array $ek, array $santeh): ?array
 
     $snName = normText((string)($santeh['name'] ?? ''));
     $snPrice = (float)($santeh['price'] ?? 0.0);
+    $snAvailable = (bool)($santeh['available'] ?? false);
+    $ekStockStatus = (string)($ek['stock_status'] ?? '');
 
     $update = ['id' => $id];
     $changed = false;
@@ -64,6 +67,11 @@ function buildOutdatedUpdateForOne(array $ek, array $santeh): ?array
     // Compare price with 2-decimal rounding to avoid tiny float diffs
     if (round($ekPrice, 2) !== round($snPrice, 2)) {
         $update['regular_price'] = (string)round($snPrice, 2);
+        $changed = true;
+    }
+    // Stock status rule: if santeh says available=true and EK has outofstock -> switch to instock
+    if ($snAvailable === true && $ekStockStatus === 'outofstock') {
+        $update['stock_status'] = 'instock';
         $changed = true;
     }
 
