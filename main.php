@@ -61,16 +61,15 @@ try {
     $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
     // Limit transformed array to at most 3 items
     $santehMixersTransformed = array_slice($santehMixersTransformed, 0, 3); // TODO remove later
-    
     safeLog('info', 'santehservice_products_transformed', [
         'before' => count($santehMixers),
         'after' => count($santehMixersTransformed),
     ]);
-    
 
     // take $santehMixersTransformed array and use as input and run find-new-mixers.php
     $newProductsJsonPath = runFindNewProducts($santehMixersTransformed, $ekMixers);
     safeLog('info', 'new_products_json_generated', ['path' => $newProductsJsonPath]);
+    
     // After finding new products, find out-of-stock mixers and dump JSON payload
     $outOfStockJsonPath = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
     safeLog('info', 'outofstock_products_json_generated', ['path' => $outOfStockJsonPath]);
