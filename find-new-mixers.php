@@ -53,6 +53,8 @@ function mapSantehToWooCreate(array $santehProduct, int $categoryId): array
             $attributes[] = [
                 'name' => $paramName,
                 'options' => [$paramValue],
+                'visible' => true,
+                'variation' => false,
             ];
         }
     }
