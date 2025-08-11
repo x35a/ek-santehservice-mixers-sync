@@ -104,9 +104,9 @@ function dumpBatchUpdateServerResponse(string $responseBody, ?string $dumpFilena
 
 /**
  * Entry point called from main.php after runBatchUpdateMixers().
- * Sends the batch payload and returns path to server response dump.
+ * Accepts the batch payload array and returns path to server response dump.
  */
-function runBatchUpdateSendRequest(string $batchPath): string
+function runBatchUpdateSendRequest(array $batchPayload): string
 {
     $siteUrl = (string)cfg('WC_SITE_URL', '');
     $username = (string)cfg('WC_API_USERNAME', '');
@@ -114,13 +114,10 @@ function runBatchUpdateSendRequest(string $batchPath): string
     if ($siteUrl === '' || $username === '' || $password === '') {
         throw new RuntimeException('Missing required config values for WooCommerce API.');
     }
-
-    if ($batchPath === '' || !is_file($batchPath)) {
-        throw new RuntimeException('Batch payload file not found: ' . $batchPath);
-    }
-    $json = @file_get_contents($batchPath);
-    if (!is_string($json) || trim($json) === '') {
-        throw new RuntimeException('Batch payload file is empty or unreadable: ' . $batchPath);
+    // Encode payload
+    $json = json_encode($batchPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        throw new RuntimeException('Failed to encode batch payload to JSON.');
     }
 
     // Determine auth method (query params on HTTP or when forced by config)
@@ -151,6 +148,8 @@ function runBatchUpdateSendRequest(string $batchPath): string
         'endpoint' => $endpoint,
         'query_auth' => $useQueryAuth ? 1 : 0,
         'payload_bytes' => strlen($json),
+        'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
+        'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
     ]);
 
     // Perform request

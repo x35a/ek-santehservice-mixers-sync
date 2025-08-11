@@ -97,25 +97,40 @@ try {
 
     // Build combined batch payload and dump it
     try {
-        $batchPath = runBatchUpdateMixers(
+        $batchPayload = runBatchUpdateMixers(
             $newProductsJsonPath ?? '',
             $outOfStockJsonPath ?? '',
             $outdatedJsonPath ?? ''
         );
-        safeLog('info', 'batch_update_json_generated', ['path' => $batchPath]);
+        safeLog('info', 'batch_update_json_generated', [
+            'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
+            'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
+        ]);
     } catch (Throwable $e) {
         safeLog('error', 'runBatchUpdateMixers_failed', ['error' => $e->getMessage()]);
     }
 
     // Send the batch request to WooCommerce and dump server response
     try {
-        if (isset($batchPath) && is_string($batchPath) && $batchPath !== '') {
-            $serverResponsePath = runBatchUpdateSendRequest($batchPath);
-            if ($serverResponsePath !== '') {
-                safeLog('info', 'batch_update_server_response_dump_path', ['path' => $serverResponsePath]);
+        if (isset($batchPayload) && is_array($batchPayload)) {
+            $create = $batchPayload['create'] ?? [];
+            $update = $batchPayload['update'] ?? [];
+            $hasNonEmpty = (is_array($create) && count($create) > 0) || (is_array($update) && count($update) > 0);
+
+            if (!$hasNonEmpty) {
+                safeLog('info', 'batch_update_send_skipped', [
+                    'reason' => 'batch has only empty arrays',
+                    'create_count' => is_array($create) ? count($create) : 0,
+                    'update_count' => is_array($update) ? count($update) : 0,
+                ]);
+            } else {
+                $serverResponsePath = runBatchUpdateSendRequest($batchPayload);
+                if ($serverResponsePath !== '') {
+                    safeLog('info', 'batch_update_server_response_dump_path', ['path' => $serverResponsePath]);
+                }
             }
         } else {
-            safeLog('warning', 'batch_update_send_skipped', ['reason' => 'no batch payload path available']);
+            safeLog('warning', 'batch_update_send_skipped', ['reason' => 'no batch payload available']);
         }
     } catch (Throwable $e) {
         safeLog('error', 'runBatchUpdateSendRequest_failed', ['error' => $e->getMessage()]);

@@ -140,9 +140,9 @@ function dumpBatchUpdatePayload(array $payload, ?string $dumpFilename = null): s
 
 /**
  * Entry point used by main.php after individual payloads are generated.
- * Returns absolute path to the combined JSON dump.
+ * Returns the combined payload array. Still dumps to file for debugging/traceability.
  */
-function runBatchUpdateMixers(string $newProductsJsonPath, string $outOfStockJsonPath, string $outdatedJsonPath): string
+function runBatchUpdateMixers(string $newProductsJsonPath, string $outOfStockJsonPath, string $outdatedJsonPath): array
 {
     safeLog('info', 'batch_update_start', [
         'new_path' => $newProductsJsonPath,
@@ -155,13 +155,19 @@ function runBatchUpdateMixers(string $newProductsJsonPath, string $outOfStockJso
     $odt = readJsonAssoc($outdatedJsonPath);
 
     $payload = buildCombinedBatchPayload($new, $oos, $odt);
-    $dumpPath = dumpBatchUpdatePayload($payload);
+    // Dump for debugging/traceability (non-blocking if write fails inside helper)
+    try {
+        $dumpPath = dumpBatchUpdatePayload($payload);
+    } catch (Throwable $e) {
+        $dumpPath = '';
+        safeLog('warning', 'batch_update_payload_dump_failed', ['error' => $e->getMessage()]);
+    }
 
     safeLog('info', 'batch_update_complete', [
-        'dump_path' => $dumpPath,
         'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
         'update_count' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0,
+        'dump_path' => $dumpPath,
     ]);
 
-    return $dumpPath;
+    return $payload;
 }
