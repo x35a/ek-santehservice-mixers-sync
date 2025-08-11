@@ -20,29 +20,21 @@ function fetchSantehserviceMixersProductsFromXml(): array
     }
 
     safeLog('info', 'santehservice_xml_fetch_start', ['url' => $url]);
+    $headers = [
+        'Accept: application/xml, text/xml;q=0.9, */*;q=0.8',
+        'User-Agent: ek-santehservice-mixers-sync/1.0',
+    ];
+    [, $xmlBody] = httpGet($url, $headers, 60);
+    $products = parseSantehserviceMixersXmlToArray($xmlBody);
+    safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
+    // Dump raw Santehservice products for debugging/inspection (analogous to EK dump)
     try {
-        $headers = [
-            'Accept: application/xml, text/xml;q=0.9, */*;q=0.8',
-            'User-Agent: ek-santehservice-mixers-sync/1.0',
-        ];
-        [, $xmlBody] = httpGet($url, $headers, 60);
-        $products = parseSantehserviceMixersXmlToArray($xmlBody);
-        safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
-        // Dump raw Santehservice products for debugging/inspection (analogous to EK dump)
-        try {
-            $dumpPath = dumpSantehserviceProducts($products);
-            safeLog('info', 'santehservice_products_dump_path', ['path' => $dumpPath]);
-        } catch (Throwable $e) {
-            safeLog('error', 'santehservice_products_dump_failed', ['error' => $e->getMessage()]);
-        }
-        return $products;
+        $dumpPath = dumpSantehserviceProducts($products);
+        safeLog('info', 'santehservice_products_dump_path', ['path' => $dumpPath]);
     } catch (Throwable $e) {
-        safeLog('error', 'santehservice_xml_fetch_failed', [
-            'error' => $e->getMessage(),
-            'url' => $url,
-        ]);
-        throw $e;
+        safeLog('error', 'santehservice_products_dump_failed', ['error' => $e->getMessage()]);
     }
+    return $products;
 }
 
 /**
@@ -60,13 +52,31 @@ function parseSantehserviceMixersXmlToArray(string $xmlBody): array
 
     // Expect structure: yml_catalog -> shop -> offers -> offer
     if (!isset($xml->shop->offers->offer)) {
-        return [];
+        safeLog('error', 'santehservice_xml_structure_mismatch', [
+            'expected' => 'yml_catalog -> shop -> offers -> offer',
+            'actual_root' => $xml->getName(),
+            'has_shop' => isset($xml->shop),
+            'has_offers' => isset($xml->shop->offers),
+            'has_offer' => isset($xml->shop->offers->offer),
+        ]);
+        
+        throw new RuntimeException('XML structure does not match expected format: yml_catalog -> shop -> offers -> offer');
     }
 
     $result = [];
     foreach ($xml->shop->offers->offer as $offer) {
         $result[] = santehserviceOfferToArray($offer);
     }
+    
+    // Check if we got any offers after parsing
+    if (empty($result)) {
+        safeLog('error', 'santehservice_xml_no_offers', [
+            'reason' => 'XML structure is correct but no offers found',
+            'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
+        ]);
+        throw new RuntimeException('XML structure is correct but no offers found in the feed');
+    }
+    
     return $result;
 }
 

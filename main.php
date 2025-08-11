@@ -40,23 +40,6 @@ try {
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
     $santehMixers = fetchSantehserviceMixersProductsFromXml();
     safeLog('info', 'santehservice_products_loaded', ['total' => count($santehMixers)]);
-    if (empty($santehMixers)) {
-        safeLog('error', 'santehservice_xml_empty', [
-            'reason' => 'no offers returned',
-            'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
-        ]);
-        $subject = buildAlertSubject('Santehservice XML Empty');
-        $body = "The Santehservice XML feed returned no offers.\n\n" . json_encode([
-            'reason' => 'no offers returned',
-            'url' => (string)cfg('SANTEHSERVICE_XML_URL', ''),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
-        $log = getCurrentLogContents();
-        if ($log !== '') {
-            $body .= "--- Log ---\n" . $log;
-        }
-        sendAlertEmail($subject, $body);
-        exit(3);
-    }
 
     // Transform Santehservice products (dumping now happens inside transformer)
     $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
