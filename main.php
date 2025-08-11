@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/logging.php';
 require __DIR__ . '/send-email.php';
+require __DIR__ . '/alert-on-log-levels.php';
 require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';
 require __DIR__ . '/transform-santehservice-mixers.php';
@@ -142,6 +143,10 @@ try {
         'santeh_total' => isset($santehMixers) ? count($santehMixers) : 0,
         'santeh_transformed_total' => isset($santehMixersTransformed) ? count($santehMixersTransformed) : 0,
     ]);
+
+    // At the very end of a successful run, optionally send a summary alert
+    // if WARNING/ERROR entries are present in the current log file.
+    alertOnLogLevelsIfNeeded();
 
 } catch (Throwable $e) {
     safeLog('error', 'run failed', ['error' => $e->getMessage()]);
