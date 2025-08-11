@@ -38,6 +38,11 @@ function buildOutOfStockUpdatePayload(array $ekProducts, array $santehSkuLookup)
         if ($id <= 0 || $sku === '') {
             continue; // skip invalid entries
         }
+        // Skip if product is already marked as out of stock in EK dataset
+        $stockStatus = strtolower((string)($product['stock_status'] ?? ''));
+        if ($stockStatus === 'outofstock') {
+            continue;
+        }
         if (!isset($santehSkuLookup[$sku])) {
             // Not found in Santeh transformed -> mark out of stock
             if (function_exists('safeLog')) {
