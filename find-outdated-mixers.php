@@ -133,7 +133,7 @@ function runFindOutdatedMixers(array $ekProducts, array $santehTransformed): str
 {
     $payload = buildOutdatedUpdatePayload($ekProducts, $santehTransformed);
 
-    $dumpPath = dumpData($payload, 'outdated_payload', 'update-mixers-json-payload.json');
+    $dumpPath = dumpData($payload, 'find_outdated_mixers', 'update-mixers-json-payload.json');
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outdated_mixers_complete', [

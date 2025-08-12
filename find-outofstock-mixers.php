@@ -76,7 +76,7 @@ function runFindOutOfStockProducts(array $ekProducts, array $santehTransformed):
     $santehSkuLookup = buildSantehSkuLookup($santehTransformed);
     $payload = buildOutOfStockUpdatePayload($ekProducts, $santehSkuLookup);
 
-    $dumpPath = dumpData($payload, 'outofstock_payload', 'outofstock-mixers-json-payload.json');
+    $dumpPath = dumpData($payload, 'find_outofstock_mixers', 'outofstock-mixers-json-payload.json');
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outofstock_mixers_complete', [

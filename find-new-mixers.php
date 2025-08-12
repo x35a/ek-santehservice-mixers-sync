@@ -130,7 +130,7 @@ function runFindNewProducts(array $santehTransformed, array $ekProducts): string
     $ekSkuLookup = buildEkSkuLookup($ekProducts);
     $payload = buildWooBatchCreatePayload($santehTransformed, $ekSkuLookup, $categoryId);
 
-    $dumpPath = dumpData($payload, 'new_products_payload', 'create-new-mixers-json-payload.json', [
+    $dumpPath = dumpData($payload, 'find_new_mixers', 'create-new-mixers-json-payload.json', [
         'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
         'ek_total' => count($ekProducts),
         'santeh_transformed_total' => count($santehTransformed)

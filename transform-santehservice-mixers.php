@@ -117,7 +117,7 @@ function transformSantehserviceMixersProducts(
     }
 
     // Dump transformed products (logging happens inside the function)
-    dumpData($result, 'santehservice_transformed_products', 'santehservice-transformed-mixers.json');
+    dumpData($result, 'transform_santehservice_mixers', 'santehservice-transformed-mixers.json');
 
     return $result;
 }

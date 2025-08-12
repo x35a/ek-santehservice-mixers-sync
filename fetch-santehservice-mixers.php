@@ -29,7 +29,7 @@ function fetchSantehserviceMixersProductsFromXml(): array
     safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
     
     // Dump raw Santehservice products
-    dumpData($products, 'santehservice_products', 'santehservice-mixers.json');
+    dumpData($products, 'fetch_santehservice_mixers', 'santehservice-mixers.json');
 
     return $products;
 }

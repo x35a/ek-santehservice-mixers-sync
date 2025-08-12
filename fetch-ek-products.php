@@ -181,7 +181,7 @@ function fetchEkProducts(): array
     ]);
     
     // Dump processed EK products for debugging/inspection
-    dumpData($filteredProducts, 'ek_products', 'ek-mixers.json', [
+    dumpData($filteredProducts, 'fetch_ek_products', 'ek-mixers.json', [
         'total_count' => count($filteredProducts),
         'category_id' => $categoryId,
         'filtered_from' => count($allProducts)
