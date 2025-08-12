@@ -114,38 +114,7 @@ function buildWooBatchCreatePayload(array $santehTransformed, array $ekSkuLookup
     return ['create' => $create];
 }
 
-/**
- * Dump payload JSON into data-example directory.
- * Returns absolute path to the written file.
- *
- * @param array<string, mixed> $payload
- * @param string|null $dumpFilename
- * @return string
- */
-function dumpNewProductsPayload(array $payload, ?string $dumpFilename = null): string
-{
-    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) {
-        @mkdir($dumpDir, 0777, true);
-    }
 
-    $filename = $dumpFilename ?? 'create-new-products-json-payload.json';
-    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
-
-    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (is_string($json)) {
-        @file_put_contents($dumpPath, $json . PHP_EOL);
-        if (function_exists('safeLog')) {
-            safeLog('info', 'find_new_mixers_new_products_payload_dumped', [
-                'path' => $dumpPath,
-                'bytes' => strlen($json),
-                'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
-            ]);
-        }
-    }
-
-    return $dumpPath;
-}
 
 /**
  * Execute new-products discovery using provided Santehservice transformed array.
@@ -161,7 +130,11 @@ function runFindNewProducts(array $santehTransformed, array $ekProducts): string
     $ekSkuLookup = buildEkSkuLookup($ekProducts);
     $payload = buildWooBatchCreatePayload($santehTransformed, $ekSkuLookup, $categoryId);
 
-    $dumpPath = dumpNewProductsPayload($payload);
+    $dumpPath = dumpData($payload, 'new_products_payload', 'create-new-mixers-json-payload.json', [
+        'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
+        'ek_total' => count($ekProducts),
+        'santeh_transformed_total' => count($santehTransformed)
+    ]);
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_new_mixers_complete', [

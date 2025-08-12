@@ -97,62 +97,7 @@ function productHasCategoryId(array $product, int $categoryId): bool
     return false;
 }
 
-/**
- * Dump EK products to data-example directory.
- * Returns absolute path to the written file.
- *
- * @param array<int, array<string, mixed>> $ekProducts
- * @param string|null $dumpFilename Optional custom filename (defaults to ek-products.json)
- * @return string
- */
-function dumpEkProducts(array $ekProducts, ?string $dumpFilename = null): string
-{
-    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) {
-        if (!@mkdir($dumpDir, 0777, true)) {
-            if (function_exists('safeLog')) {
-                safeLog('error', 'ek_products_dump_failed', [
-                    'error' => 'Failed to create directory',
-                    'path' => $dumpDir
-                ]);
-            }
-            return '';
-        }
-    }
 
-    $filename = $dumpFilename ?? 'ek-products.json';
-    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
-
-    $json = json_encode($ekProducts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (!is_string($json)) {
-        if (function_exists('safeLog')) {
-            safeLog('error', 'ek_products_dump_failed', [
-                'error' => 'Failed to encode products to JSON'
-            ]);
-        }
-        return '';
-    }
-
-    $bytes = @file_put_contents($dumpPath, $json . PHP_EOL);
-    if ($bytes === false) {
-        if (function_exists('safeLog')) {
-            safeLog('error', 'ek_products_dump_failed', [
-                'error' => 'Failed to write to file',
-                'path' => $dumpPath
-            ]);
-        }
-        return '';
-    }
-
-    if (function_exists('safeLog')) {
-        safeLog('info', 'ek_products_dumped', [
-            'path' => $dumpPath,
-            'bytes' => $bytes,
-        ]);
-    }
-
-    return $dumpPath;
-}
 
 // Public function to fetch WooCommerce products based on env config
 function fetchEkProducts(): array
@@ -236,7 +181,11 @@ function fetchEkProducts(): array
     ]);
     
     // Dump processed EK products for debugging/inspection
-    dumpEkProducts($filteredProducts);
+    dumpData($filteredProducts, 'ek_products', 'ek-mixers.json', [
+        'total_count' => count($filteredProducts),
+        'category_id' => $categoryId,
+        'filtered_from' => count($allProducts)
+    ]);
     
     return $filteredProducts;
 }

@@ -61,38 +61,7 @@ function buildOutOfStockUpdatePayload(array $ekProducts, array $santehSkuLookup)
     return ['update' => $update];
 }
 
-/**
- * Dump out-of-stock payload JSON into data-example directory.
- * Returns absolute path to the written file.
- *
- * @param array<string, mixed> $payload
- * @param string|null $dumpFilename
- * @return string
- */
-function dumpOutOfStockPayload(array $payload, ?string $dumpFilename = null): string
-{
-    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) {
-        @mkdir($dumpDir, 0777, true);
-    }
 
-    $filename = $dumpFilename ?? 'find-outofstock-mixers-json-payload.json';
-    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
-
-    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (is_string($json)) {
-        @file_put_contents($dumpPath, $json . PHP_EOL);
-        if (function_exists('safeLog')) {
-            safeLog('info', 'outofstock_payload_dumped', [
-                'path' => $dumpPath,
-                'bytes' => strlen($json),
-                'update_count' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0,
-            ]);
-        }
-    }
-
-    return $dumpPath;
-}
 
 /**
  * Execute out-of-stock discovery and dump JSON payload.
@@ -107,7 +76,7 @@ function runFindOutOfStockProducts(array $ekProducts, array $santehTransformed):
     $santehSkuLookup = buildSantehSkuLookup($santehTransformed);
     $payload = buildOutOfStockUpdatePayload($ekProducts, $santehSkuLookup);
 
-    $dumpPath = dumpOutOfStockPayload($payload);
+    $dumpPath = dumpData($payload, 'outofstock_payload', 'outofstock-mixers-json-payload.json');
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outofstock_mixers_complete', [

@@ -111,32 +111,7 @@ function buildCombinedBatchPayload(array $new, array $outOfStock, array $outdate
     ];
 }
 
-/**
- * Dump combined batch payload into data-example directory.
- * Returns absolute path.
- *
- * @param array<string, mixed> $payload
- */
-function dumpBatchUpdatePayload(array $payload, ?string $dumpFilename = null): string
-{
-    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) { @mkdir($dumpDir, 0777, true); }
 
-    $filename = $dumpFilename ?? 'batch-update-mixers-json-payload.json';
-    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
-
-    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (is_string($json)) {
-        @file_put_contents($dumpPath, $json . PHP_EOL);
-        safeLog('info', 'batch_update_payload_dumped', [
-            'path' => $dumpPath,
-            'bytes' => strlen($json),
-            'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
-            'update_count' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0,
-        ]);
-    }
-    return $dumpPath;
-}
 
 /**
  * Entry point used by main.php after individual payloads are generated.
@@ -157,7 +132,7 @@ function runBatchUpdateMixers(string $newProductsJsonPath, string $outOfStockJso
     $payload = buildCombinedBatchPayload($new, $oos, $odt);
     // Dump for debugging/traceability (non-blocking if write fails inside helper)
     try {
-        $dumpPath = dumpBatchUpdatePayload($payload);
+        $dumpPath = dumpData($payload, 'batch_update_payload', 'batch-update-json-payload.json');
     } catch (Throwable $e) {
         $dumpPath = '';
         safeLog('warning', 'batch_update_payload_dump_failed', ['error' => $e->getMessage()]);

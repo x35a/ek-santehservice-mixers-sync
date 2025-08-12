@@ -71,36 +71,7 @@ function httpPostJson(string $url, string $jsonBody, array $headers = [], int $t
     return [$status, (string)$body];
 }
 
-/**
- * Dump server response body to data-example directory.
- * Returns absolute path to the written file.
- */
-function dumpBatchUpdateServerResponse(string $responseBody, ?string $dumpFilename = null): string
-{
-    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) {
-        @mkdir($dumpDir, 0777, true);
-    }
-    $filename = $dumpFilename ?? 'batch-update-server-response.json';
-    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
 
-    // Try to pretty-print JSON and keep unicode readable. If not JSON, write raw text.
-    $toWrite = $responseBody;
-    $decoded = json_decode($responseBody, true);
-    if (json_last_error() === JSON_ERROR_NONE && (is_array($decoded) || is_object($decoded))) {
-        $pretty = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (is_string($pretty)) {
-            $toWrite = $pretty;
-        }
-    }
-
-    @file_put_contents($dumpPath, $toWrite . PHP_EOL);
-    safeLog('info', 'batch_update_server_response_dumped', [
-        'path' => $dumpPath,
-        'bytes' => strlen($toWrite),
-    ]);
-    return $dumpPath;
-}
 
 /**
  * Entry point called from main.php after runBatchUpdateMixers().
@@ -157,7 +128,7 @@ function runBatchUpdateSendRequest(array $batchPayload): string
 
     // Dump server response regardless of status
     try {
-        $dumpPath = dumpBatchUpdateServerResponse((string)$body);
+        $dumpPath = dumpData(['response' => (string)$body], 'batch_update_server_response', 'batch-update-server-response.json');
     } catch (Throwable $e) {
         $dumpPath = '';
         safeLog('error', 'batch_update_response_dump_failed', ['error' => $e->getMessage()]);

@@ -29,7 +29,7 @@ function fetchSantehserviceMixersProductsFromXml(): array
     safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
     
     // Dump raw Santehservice products
-    dumpSantehserviceProducts($products);
+    dumpData($products, 'santehservice_products', 'santehservice-mixers.json');
 
     return $products;
 }
@@ -161,60 +161,5 @@ function parseDecimalString(string $value): float
 }
 
 
-/**
- * Dump raw Santehservice products to data-example directory.
- * Returns absolute path to the written file.
- *
- * @param array<int, array<string, mixed>> $products
- * @param string|null $dumpFilename Optional custom filename (defaults to santehservice-products.json)
- * @return string
- */
-function dumpSantehserviceProducts(array $products, ?string $dumpFilename = null): string
-{
-    $dumpDir = __DIR__ . DIRECTORY_SEPARATOR . 'data-example';
-    if (!is_dir($dumpDir)) {
-        if (!@mkdir($dumpDir, 0777, true)) {
-            if (function_exists('safeLog')) {
-                safeLog('error', 'santehservice_products_dump_failed', [
-                    'error' => 'Failed to create directory',
-                    'path' => $dumpDir
-                ]);
-            }
-            return '';
-        }
-    }
 
-    $filename = $dumpFilename ?? 'santehservice-products.json';
-    $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $filename;
-
-    $json = json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (!is_string($json)) {
-        if (function_exists('safeLog')) {
-            safeLog('error', 'santehservice_products_dump_failed', [
-                'error' => 'Failed to encode products to JSON'
-            ]);
-        }
-        return '';
-    }
-
-    $bytes = @file_put_contents($dumpPath, $json . PHP_EOL);
-    if ($bytes === false) {
-        if (function_exists('safeLog')) {
-            safeLog('error', 'santehservice_products_dump_failed', [
-                'error' => 'Failed to write to file',
-                'path' => $dumpPath
-            ]);
-        }
-        return '';
-    }
-
-    if (function_exists('safeLog')) {
-        safeLog('info', 'santehservice_products_dumped', [
-            'path' => $dumpPath,
-            'bytes' => $bytes,
-        ]);
-    }
-
-    return $dumpPath;
-}
 
