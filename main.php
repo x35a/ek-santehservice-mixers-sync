@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require __DIR__ . '/config-functions.php';
 require __DIR__ . '/logging.php';
 require __DIR__ . '/send-email.php';
 require __DIR__ . '/error-handlers.php';
