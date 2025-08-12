@@ -27,7 +27,7 @@ try {
     // Transform Santehservice products (dumping now happens inside transformer)
     $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
     // Limit transformed array to at most 3 items
-    $santehMixersTransformed = array_slice($santehMixersTransformed, 0, 3); // TODO remove later
+    // $santehMixersTransformed = array_slice($santehMixersTransformed, 0, 3);
     safeLog('info', 'santehservice_products_transformed', [
         'before' => count($santehMixers),
         'after' => count($santehMixersTransformed),

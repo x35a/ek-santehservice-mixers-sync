@@ -62,7 +62,7 @@ function alertOnLogLevelsIfNeeded(): void
         }
 
         $subject = buildAlertSubject('Warnings/Errors Detected');
-        $body  = "Warnings/Errors were detected in the latest run log.\n\n"; // TODO this must be content from log file - getCurrentLogContents()
+        $body  = "Warnings/Errors were detected in the latest run log.\n\n";
         $body .= "--- Log ---\n" . $log;
 
         // Best-effort; avoid throwing from here
