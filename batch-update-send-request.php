@@ -127,12 +127,7 @@ function runBatchUpdateSendRequest(array $batchPayload): string
     [$status, $body] = httpPostJson($endpoint, $json, $headers, 120);
 
     // Dump server response regardless of status
-    try {
-        $dumpPath = dumpData(['response' => (string)$body], 'batch_update_server_request', 'batch-update-server-response.json');
-    } catch (Throwable $e) {
-        $dumpPath = '';
-        safeLog('error', 'batch_update_response_dump_failed', ['error' => $e->getMessage()]);
-    }
+    $dumpPath = dumpData(['response' => (string)$body], 'batch_update_server_request', 'batch-update-server-response.json');
 
     if ($status === 0) {
         safeLog('error', 'batch_update_send_transport_error', [

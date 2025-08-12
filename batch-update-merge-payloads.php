@@ -130,13 +130,9 @@ function runBatchUpdateMixers(array $newProductsPayload, array $outOfStockPayloa
     ]);
 
     $payload = buildCombinedBatchPayload($newProductsPayload, $outOfStockPayload, $outdatedPayload);
-    // Dump for debugging/traceability (non-blocking if write fails inside helper)
-    try {
-        $dumpPath = dumpData($payload, 'batch_update_merge_payloads', 'batch-update-json-payload.json');
-    } catch (Throwable $e) {
-        $dumpPath = '';
-        safeLog('warning', 'batch_update_payload_dump_failed', ['error' => $e->getMessage()]);
-    }
+    
+    // Dump for debugging/traceability
+    $dumpPath = dumpData($payload, 'batch_update_merge_payloads', 'batch-update-json-payload.json');
 
     safeLog('info', 'batch_update_complete', [
         'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,

@@ -45,8 +45,6 @@ function dumpData(array $data, string $type, string $dumpFilename, ?array $typeS
         }
     }
 
-
-
     $dumpPath = $dumpDir . DIRECTORY_SEPARATOR . $dumpFilename;
 
     $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
