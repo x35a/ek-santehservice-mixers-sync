@@ -118,34 +118,38 @@ function buildWooBatchCreatePayload(array $santehTransformed, array $ekSkuLookup
 
 /**
  * Execute new-products discovery using provided Santehservice transformed array.
- * Returns absolute path of the dumped JSON payload.
+ * Returns the payload array directly.
  *
- * @param array<int, array<string, mixed>> $santehTransformed
- * @return string
+ * @param array<int, array<string, mixed>> $santehTransformed * @param array<int, array<string, mixed>> $ekProducts
+ * @return array<string, mixed>
  */
-function runFindNewProducts(array $santehTransformed, array $ekProducts): string
+function runFindNewProducts(array $santehTransformed, array $ekProducts): array
 {
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
 
     $ekSkuLookup = buildEkSkuLookup($ekProducts);
     $payload = buildWooBatchCreatePayload($santehTransformed, $ekSkuLookup, $categoryId);
 
+    $createCount = is_array($payload['create'] ?? null) ? count($payload['create']) : 0;
+    $ekTotal = count($ekProducts);
+    $santehTotal = count($santehTransformed);
+
     $dumpPath = dumpData($payload, 'find_new_mixers', 'create-new-mixers-json-payload.json', [
-        'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
-        'ek_total' => count($ekProducts),
-        'santeh_transformed_total' => count($santehTransformed)
+        'create_count' => $createCount,
+        'ek_total' => $ekTotal,
+        'santeh_transformed_total' => $santehTotal
     ]);
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_new_mixers_complete', [
-            'ek_total' => count($ekProducts),
-            'santeh_transformed_total' => count($santehTransformed),
-            'new_products' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
+            'ek_total' => $ekTotal,
+            'santeh_transformed_total' => $santehTotal,
+            'new_products' => $createCount,
             'dump_path' => $dumpPath,
         ]);
     }
 
-    return $dumpPath;
+    return $payload;
 }
 
 

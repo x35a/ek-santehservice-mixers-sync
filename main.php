@@ -33,23 +33,29 @@ try {
         'after' => count($santehMixersTransformed),
     ]);
 
-    // take $santehMixersTransformed array and use as input and run find-new-mixers.php
-    $newProductsJsonPath = runFindNewProducts($santehMixersTransformed, $ekMixers);
-    safeLog('info', 'new_products_json_generated', ['path' => $newProductsJsonPath]);
+    // Get new products payload
+    $newProductsPayload = runFindNewProducts($santehMixersTransformed, $ekMixers);
+    safeLog('info', 'new_products_generated', [
+        'create_count' => is_array($newProductsPayload['create'] ?? null) ? count($newProductsPayload['create']) : 0
+    ]);
     
-    // After finding new products, find out-of-stock mixers and dump JSON payload
-    $outOfStockJsonPath = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
-    safeLog('info', 'outofstock_products_json_generated', ['path' => $outOfStockJsonPath]);
+    // Get out-of-stock products payload
+    $outOfStockPayload = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
+    safeLog('info', 'outofstock_products_generated', [
+        'update_count' => is_array($outOfStockPayload['update'] ?? null) ? count($outOfStockPayload['update']) : 0
+    ]);
 
-    // After out-of-stock, find outdated mixers (name/description/price diffs) and dump JSON payload
-    $outdatedJsonPath = runFindOutdatedMixers($ekMixers, $santehMixersTransformed);
-    safeLog('info', 'outdated_products_json_generated', ['path' => $outdatedJsonPath]);
+    // Get outdated products payload
+    $outdatedPayload = runFindOutdatedMixers($ekMixers, $santehMixersTransformed);
+    safeLog('info', 'outdated_products_generated', [
+        'update_count' => is_array($outdatedPayload['update'] ?? null) ? count($outdatedPayload['update']) : 0
+    ]);
 
-    // Build combined batch payload and dump it
+    // Build combined batch payload
     $batchPayload = runBatchUpdateMixers(
-        $newProductsJsonPath ?? '',
-        $outOfStockJsonPath ?? '',
-        $outdatedJsonPath ?? ''
+        $newProductsPayload,
+        $outOfStockPayload,
+        $outdatedPayload
     );
     safeLog('info', 'batch_update_json_generated', [
         'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,

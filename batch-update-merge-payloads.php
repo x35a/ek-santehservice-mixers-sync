@@ -114,22 +114,22 @@ function buildCombinedBatchPayload(array $new, array $outOfStock, array $outdate
 
 
 /**
- * Entry point used by main.php after individual payloads are generated.
- * Returns the combined payload array. Still dumps to file for debugging/traceability.
+ * Combines multiple payloads into a single batch update payload.
+ * 
+ * @param array<string, mixed> $newProductsPayload Payload from runFindNewProducts
+ * @param array<string, mixed> $outOfStockPayload Payload from runFindOutOfStockProducts
+ * @param array<string, mixed> $outdatedPayload Payload from runFindOutdatedMixers
+ * @return array<string, mixed> Combined payload
  */
-function runBatchUpdateMixers(string $newProductsJsonPath, string $outOfStockJsonPath, string $outdatedJsonPath): array
+function runBatchUpdateMixers(array $newProductsPayload, array $outOfStockPayload, array $outdatedPayload): array
 {
     safeLog('info', 'batch_update_start', [
-        'new_path' => $newProductsJsonPath,
-        'outofstock_path' => $outOfStockJsonPath,
-        'outdated_path' => $outdatedJsonPath,
+        'new_products' => is_array($newProductsPayload['create'] ?? null) ? count($newProductsPayload['create']) : 0,
+        'outofstock_products' => is_array($outOfStockPayload['update'] ?? null) ? count($outOfStockPayload['update']) : 0,
+        'outdated_products' => is_array($outdatedPayload['update'] ?? null) ? count($outdatedPayload['update']) : 0,
     ]);
 
-    $new = readJsonAssoc($newProductsJsonPath);
-    $oos = readJsonAssoc($outOfStockJsonPath);
-    $odt = readJsonAssoc($outdatedJsonPath);
-
-    $payload = buildCombinedBatchPayload($new, $oos, $odt);
+    $payload = buildCombinedBatchPayload($newProductsPayload, $outOfStockPayload, $outdatedPayload);
     // Dump for debugging/traceability (non-blocking if write fails inside helper)
     try {
         $dumpPath = dumpData($payload, 'batch_update_merge_payloads', 'batch-update-json-payload.json');

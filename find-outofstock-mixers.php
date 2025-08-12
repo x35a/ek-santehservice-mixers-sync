@@ -64,28 +64,36 @@ function buildOutOfStockUpdatePayload(array $ekProducts, array $santehSkuLookup)
 
 
 /**
- * Execute out-of-stock discovery and dump JSON payload.
- * Returns absolute path of the dumped JSON payload.
+ * Execute out-of-stock discovery.
+ * Returns the update payload array directly.
  *
  * @param array<int, array<string, mixed>> $ekProducts
  * @param array<int, array<string, mixed>> $santehTransformed
- * @return string
+ * @return array<string, mixed>
  */
-function runFindOutOfStockProducts(array $ekProducts, array $santehTransformed): string
+function runFindOutOfStockProducts(array $ekProducts, array $santehTransformed): array
 {
     $santehSkuLookup = buildSantehSkuLookup($santehTransformed);
     $payload = buildOutOfStockUpdatePayload($ekProducts, $santehSkuLookup);
 
-    $dumpPath = dumpData($payload, 'find_outofstock_mixers', 'outofstock-mixers-json-payload.json');
+    $updateCount = is_array($payload['update'] ?? null) ? count($payload['update']) : 0;
+    $ekTotal = count($ekProducts);
+    $santehTotal = count($santehTransformed);
+
+    $dumpPath = dumpData($payload, 'find_outofstock_mixers', 'outofstock-mixers-json-payload.json', [
+        'update_count' => $updateCount,
+        'ek_total' => $ekTotal,
+        'santeh_transformed_total' => $santehTotal
+    ]);
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outofstock_mixers_complete', [
-            'ek_total' => count($ekProducts),
-            'santeh_transformed_total' => count($santehTransformed),
-            'outofstock_products' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0,
+            'ek_total' => $ekTotal,
+            'santeh_transformed_total' => $santehTotal,
+            'outofstock_products' => $updateCount,
             'dump_path' => $dumpPath,
         ]);
     }
 
-    return $dumpPath;
+    return $payload;
 }

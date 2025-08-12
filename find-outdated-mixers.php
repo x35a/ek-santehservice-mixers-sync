@@ -122,27 +122,35 @@ function buildOutdatedUpdatePayload(array $ekProducts, array $santehTransformed)
 
 
 /**
- * Execute outdated mixers detection and dump JSON payload.
- * Returns absolute path of the dumped JSON payload.
+ * Execute outdated mixers detection.
+ * Returns the update payload array directly.
  *
  * @param array<int, array<string, mixed>> $ekProducts
  * @param array<int, array<string, mixed>> $santehTransformed
- * @return string
+ * @return array<string, mixed>
  */
-function runFindOutdatedMixers(array $ekProducts, array $santehTransformed): string
+function runFindOutdatedMixers(array $ekProducts, array $santehTransformed): array
 {
     $payload = buildOutdatedUpdatePayload($ekProducts, $santehTransformed);
 
-    $dumpPath = dumpData($payload, 'find_outdated_mixers', 'update-mixers-json-payload.json');
+    $updateCount = is_array($payload['update'] ?? null) ? count($payload['update']) : 0;
+    $ekTotal = count($ekProducts);
+    $santehTotal = count($santehTransformed);
+
+    $dumpPath = dumpData($payload, 'find_outdated_mixers', 'update-mixers-json-payload.json', [
+        'update_count' => $updateCount,
+        'ek_total' => $ekTotal,
+        'santeh_transformed_total' => $santehTotal
+    ]);
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outdated_mixers_complete', [
-            'ek_total' => count($ekProducts),
-            'santeh_transformed_total' => count($santehTransformed),
-            'outdated_products' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0,
+            'ek_total' => $ekTotal,
+            'santeh_transformed_total' => $santehTotal,
+            'outdated_products' => $updateCount,
             'dump_path' => $dumpPath,
         ]);
     }
 
-    return $dumpPath;
+    return $payload;
 }
