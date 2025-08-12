@@ -4,7 +4,6 @@ declare(strict_types=1);
 require __DIR__ . '/logging.php';
 require __DIR__ . '/send-email.php';
 require __DIR__ . '/error-handlers.php';
-require __DIR__ . '/alert-on-log-levels.php';
 require __DIR__ . '/dump-data.php';
 require __DIR__ . '/fetch-ek-products.php';
 require __DIR__ . '/fetch-santehservice-mixers.php';

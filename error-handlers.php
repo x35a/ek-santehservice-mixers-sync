@@ -1,50 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// Global error/exception/shutdown handlers that will log and alert
+// Global error/exception/shutdown handler that will log and alert
 // These should be included early in the application lifecycle
-
-// Register global error handler for PHP errors (E_WARNING, E_NOTICE, etc.)
-set_error_handler(static function (int $severity, string $message, ?string $file = null, ?int $line = null): bool {
-    // Respect error_reporting level: if @ operator used, error_reporting() returns 0
-    if (!(error_reporting() & $severity)) {
-        return false; // let PHP handle
-    }
-    $context = ['severity' => $severity];
-    if ($file !== null) {
-        $context['file'] = $file;
-    }
-    if ($line !== null) {
-        $context['line'] = $line;
-    }
-    safeLog('error', 'php_error', $context);
-    $subject = buildAlertSubject('PHP Error');
-    $body = "A PHP error occurred.\n\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
-    $log = getCurrentLogContents();
-    if ($log !== '') {
-        $body .= "--- Log ---\n" . $log;
-    }
-    sendAlertEmail($subject, $body);
-    return true; // handled
-});
-
-// Register global exception handler for uncaught exceptions
-set_exception_handler(static function (Throwable $e): void {
-    $context = [
-        'type' => get_class($e),
-        'message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-    ];
-    safeLog('error', 'uncaught_exception', $context);
-    $subject = buildAlertSubject('Unhandled Exception');
-    $body = "An unhandled exception occurred.\n\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
-    $log = getCurrentLogContents();
-    if ($log !== '') {
-        $body .= "--- Log ---\n" . $log;
-    }
-    sendAlertEmail($subject, $body);
-});
 
 // Register shutdown function for fatal errors
 register_shutdown_function(static function (): void {
@@ -66,3 +24,50 @@ register_shutdown_function(static function (): void {
         sendAlertEmail($subject, $body);
     }
 });
+
+
+/**
+ * alert-on-log-levels.php
+ * Sends a single summary email at the end of a run if the current log contains WARNING/ERROR.
+ *
+ * Depends on existing helpers defined elsewhere in the project:
+ *  - cfg()
+ *  - getCurrentLogContents()
+ *  - buildAlertSubject()
+ *  - sendAlertEmail()
+ */
+function alertOnLogLevelsIfNeeded(): void
+{
+    try {
+        // Feature toggle
+        $shouldScan = (string)cfg('ALERT_ON_LOG_WARNINGS', '') === '1';
+        if (!$shouldScan) {
+            return;
+        }
+
+        // WARNING (default) => match WARNING or ERROR
+        // ERROR => only match ERROR
+        $minLevel = strtoupper((string)cfg('ALERT_MIN_LEVEL', 'WARNING'));
+        $pattern = $minLevel === 'ERROR'
+            ? '/\[(ERROR)\]/'
+            : '/\[(WARNING|ERROR)\]/';
+
+        $log = getCurrentLogContents();
+        if ($log === '') {
+            return;
+        }
+
+        if (!preg_match($pattern, $log)) {
+            return; // nothing to report
+        }
+
+        $subject = buildAlertSubject('Warnings/Errors Detected');
+        $body  = "Warnings/Errors were detected in the latest run log.\n\n"; // TODO this must be content from log file - getCurrentLogContents()
+        $body .= "--- Log ---\n" . $log;
+
+        // Best-effort; avoid throwing from here
+        @sendAlertEmail($subject, $body);
+    } catch (Throwable $e) {
+        // Intentionally swallow to avoid affecting the main run
+    }
+}
