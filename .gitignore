@@ -1,5 +1,6 @@
-config.php
-logs/
+.env
 .cursor/rules/context.mdc
 .windsurf/rules/context.md
+config.php
+logs/
 data-example/
