@@ -55,8 +55,8 @@ function getLogPath(): string
         $dir = __DIR__;
     }
 
-    // Keep only last 5 days of logs
-    cleanupOldLogs($dir, 5);
+    // Keep only last n days of logs
+    cleanupOldLogs($dir, 7);
 
     $filename = date('Y-m-d-H-i-s') . '-' . str_replace('.', '', uniqid('', true)) . '.log';
     $cachedPath = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
