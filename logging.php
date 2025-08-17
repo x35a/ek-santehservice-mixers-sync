@@ -98,6 +98,11 @@ function safeLog(string $level, string $message, array $context = []): void
         }
 
         $autoContext = [];
+        // Merge user context, user-supplied keys win
+        foreach ($context as $k => $v) {
+            $autoContext[$k] = $v;
+        }
+        
         if ($includeRunId && $runId !== null) {
             $autoContext['run_id'] = $runId;
         }
@@ -112,11 +117,6 @@ function safeLog(string $level, string $message, array $context = []): void
         }
         if ($callerFunction !== null) {
             $autoContext['func'] = $callerFunction;
-        }
-
-        // Merge user context, user-supplied keys win
-        foreach ($context as $k => $v) {
-            $autoContext[$k] = $v;
         }
 
         $line = sprintf('%s [%s] %s', date('c'), strtoupper($level), $message);
