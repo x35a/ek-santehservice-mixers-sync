@@ -15,41 +15,31 @@ require __DIR__ . '/find-outdated-mixers.php';
 require __DIR__ . '/batch-update-merge-payloads.php';
 require __DIR__ . '/batch-update-send-request.php';
 
-safeLog('info', 'run start');
 try {
     $ekMixers = fetchEkProducts();
     $categoryId = (int)cfg('WC_CATEGORY_ID', 121);
 
     // After EK WooCommerce products are fetched, also fetch Santehservice XML feed
     $santehMixers = fetchSantehserviceMixersProductsFromXml();
-    safeLog('info', 'santehservice_products_loaded', ['total' => count($santehMixers)]);
 
     // Transform Santehservice products (dumping now happens inside transformer)
     $santehMixersTransformed = transformSantehserviceMixersProducts($santehMixers);
     // Limit transformed array to at most 3 items
     // $santehMixersTransformed = array_slice($santehMixersTransformed, 0, 3);
-    safeLog('info', 'santehservice_products_transformed', [
+
+    safeLog('info', 'transform_santehservice_mixers', [
         'before' => count($santehMixers),
         'after' => count($santehMixersTransformed),
     ]);
 
     // Get new products payload
     $newProductsPayload = runFindNewProducts($santehMixersTransformed, $ekMixers);
-    safeLog('info', 'new_products_generated', [
-        'create_count' => is_array($newProductsPayload['create'] ?? null) ? count($newProductsPayload['create']) : 0
-    ]);
     
     // Get out-of-stock products payload
     $outOfStockPayload = runFindOutOfStockProducts($ekMixers, $santehMixersTransformed);
-    safeLog('info', 'outofstock_products_generated', [
-        'update_count' => is_array($outOfStockPayload['update'] ?? null) ? count($outOfStockPayload['update']) : 0
-    ]);
 
     // Get outdated products payload
     $outdatedPayload = runFindOutdatedMixers($ekMixers, $santehMixersTransformed);
-    safeLog('info', 'outdated_products_generated', [
-        'update_count' => is_array($outdatedPayload['update'] ?? null) ? count($outdatedPayload['update']) : 0
-    ]);
 
     // Build combined batch payload
     $batchPayload = runBatchUpdateMixers(
@@ -57,10 +47,6 @@ try {
         $outOfStockPayload,
         $outdatedPayload
     );
-    safeLog('info', 'batch_update_json_generated', [
-        'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
-        'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
-    ]);
 
     // Send the batch request to WooCommerce and dump server response
     if (isset($batchPayload) && is_array($batchPayload)) {
@@ -83,12 +69,6 @@ try {
     } else {
         safeLog('warning', 'batch_update_send_skipped', ['reason' => 'no batch payload available']);
     }
-
-    safeLog('info', 'run complete', [
-        'ek_total' => count($ekMixers),
-        'santeh_total' => isset($santehMixers) ? count($santehMixers) : 0,
-        'santeh_transformed_total' => isset($santehMixersTransformed) ? count($santehMixersTransformed) : 0,
-    ]);
 
     // At the very end of a successful run, optionally send a summary alert
     // if WARNING/ERROR entries are present in the current log file.

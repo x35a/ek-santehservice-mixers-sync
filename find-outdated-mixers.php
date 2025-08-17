@@ -145,10 +145,7 @@ function runFindOutdatedMixers(array $ekProducts, array $santehTransformed): arr
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outdated_mixers_complete', [
-            'ek_total' => $ekTotal,
-            'santeh_transformed_total' => $santehTotal,
-            'outdated_products' => $updateCount,
-            'dump_path' => $dumpPath,
+            'outdated_products' => $updateCount
         ]);
     }
 

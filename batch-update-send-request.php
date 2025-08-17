@@ -115,13 +115,13 @@ function runBatchUpdateSendRequest(array $batchPayload): string
         $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
     }
 
-    safeLog('info', 'batch_update_send_start', [
-        'endpoint' => $endpoint,
-        'query_auth' => $useQueryAuth ? 1 : 0,
-        'payload_bytes' => strlen($json),
-        'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
-        'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
-    ]);
+    // safeLog('info', 'batch_update_send_start', [
+    //     'endpoint' => $endpoint,
+    //     'query_auth' => $useQueryAuth ? 1 : 0,
+    //     'payload_bytes' => strlen($json),
+    //     'create_count' => is_array($batchPayload['create'] ?? null) ? count($batchPayload['create']) : 0,
+    //     'update_count' => is_array($batchPayload['update'] ?? null) ? count($batchPayload['update']) : 0,
+    // ]);
 
     // Perform request
     [$status, $body] = httpPostJson($endpoint, $json, $headers, 120);
@@ -169,8 +169,7 @@ function runBatchUpdateSendRequest(array $batchPayload): string
     // Success
     safeLog('info', 'batch_update_send_success', [
         'status' => $status,
-        'response_bytes' => strlen((string)$body),
-        'response_dump_path' => $dumpPath,
+        'response_bytes' => strlen((string)$body)
     ]);
     return $dumpPath;
 }

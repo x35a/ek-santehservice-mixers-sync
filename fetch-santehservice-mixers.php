@@ -19,18 +19,20 @@ function fetchSantehserviceMixersProductsFromXml(): array
         throw new RuntimeException('Missing SANTEHSERVICE_XML_URL in config.php');
     }
 
-    safeLog('info', 'santehservice_xml_fetch_start', ['url' => $url]);
+    // safeLog('info', 'santehservice_xml_fetch_start', ['url' => $url]);
+    
     $headers = [
         'Accept: application/xml, text/xml;q=0.9, */*;q=0.8',
         'User-Agent: ek-santehservice-mixers-sync/1.0',
     ];
     [, $xmlBody] = httpGet($url, $headers, 60);
     $products = parseSantehserviceMixersXmlToArray($xmlBody);
-    safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
     
-    // Dump raw Santehservice products
-    dumpData($products, 'fetch_santehservice_mixers', 'santehservice-mixers.json');
+    safeLog('info', 'santehservice_xml_fetch_complete', ['total' => count($products)]);
 
+    // Dump raw Santehservice products
+    dumpData($products, 'santehservice_xml', 'santehservice-mixers.json');
+    
     return $products;
 }
 

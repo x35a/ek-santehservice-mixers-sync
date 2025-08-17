@@ -80,7 +80,7 @@ function dumpData(array $data, string $type, string $dumpFilename, ?array $typeS
             $logData = array_merge($logData, $typeSpecificData);
         }
 
-        safeLog('info', $type . '_dumped', $logData);
+        // safeLog('info', $type . '_dumped', $logData);
     }
 
     return $dumpPath;

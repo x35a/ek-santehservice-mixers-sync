@@ -88,10 +88,7 @@ function runFindOutOfStockProducts(array $ekProducts, array $santehTransformed):
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_outofstock_mixers_complete', [
-            'ek_total' => $ekTotal,
-            'santeh_transformed_total' => $santehTotal,
-            'outofstock_products' => $updateCount,
-            'dump_path' => $dumpPath,
+            'outofstock_products' => $updateCount
         ]);
     }
 

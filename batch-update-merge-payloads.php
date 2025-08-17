@@ -123,21 +123,14 @@ function buildCombinedBatchPayload(array $new, array $outOfStock, array $outdate
  */
 function runBatchUpdateMixers(array $newProductsPayload, array $outOfStockPayload, array $outdatedPayload): array
 {
-    safeLog('info', 'batch_update_start', [
-        'new_products' => is_array($newProductsPayload['create'] ?? null) ? count($newProductsPayload['create']) : 0,
-        'outofstock_products' => is_array($outOfStockPayload['update'] ?? null) ? count($outOfStockPayload['update']) : 0,
-        'outdated_products' => is_array($outdatedPayload['update'] ?? null) ? count($outdatedPayload['update']) : 0,
-    ]);
-
     $payload = buildCombinedBatchPayload($newProductsPayload, $outOfStockPayload, $outdatedPayload);
     
     // Dump for debugging/traceability
     $dumpPath = dumpData($payload, 'batch_update_merge_payloads', 'batch-update-json-payload.json');
 
-    safeLog('info', 'batch_update_complete', [
+    safeLog('info', 'batch_merge_complete', [
         'create_count' => is_array($payload['create'] ?? null) ? count($payload['create']) : 0,
-        'update_count' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0,
-        'dump_path' => $dumpPath,
+        'update_count' => is_array($payload['update'] ?? null) ? count($payload['update']) : 0
     ]);
 
     return $payload;

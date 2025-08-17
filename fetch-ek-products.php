@@ -97,8 +97,6 @@ function fetchEkProducts(): array
 
     $apiBase = rtrim($siteUrl, '/') . '/wp-json/wc/v3/products';
 
-    safeLog('info', 'ek_products_fetch_start', ['per_page' => $perPage, 'query_auth' => $useQueryAuth ? 1 : 0]);
-
     $pageNumber = 1;
     $allProducts = [];
 
@@ -120,7 +118,7 @@ function fetchEkProducts(): array
             $headers[] = 'Authorization: Basic ' . base64_encode($username . ':' . $password);
         }
 
-        safeLog('info', 'ek_products_request', ['page' => $pageNumber]);
+        // safeLog('info', 'ek_products_request', ['page' => $pageNumber]);
         [, $body] = httpGet($url, $headers, 60);
         $decoded = json_decode($body, true);
         if (!is_array($decoded)) {
@@ -132,7 +130,7 @@ function fetchEkProducts(): array
             ));
         }
         $count = count($decoded);
-        safeLog('info', 'ek_products_page_fetched', ['page' => $pageNumber, 'items' => $count]);
+        // safeLog('info', 'ek_products_page_fetched', ['page' => $pageNumber, 'items' => $count]);
         if ($count > 0) {
             $allProducts = array_merge($allProducts, $decoded);
         }
@@ -157,7 +155,7 @@ function fetchEkProducts(): array
     ]);
     
     // Dump processed EK products for debugging/inspection
-    dumpData($filteredProducts, 'fetch_ek_products', 'ek-mixers.json', [
+    dumpData($filteredProducts, 'ek_products', 'ek-mixers.json', [
         'total_count' => count($filteredProducts),
         'category_id' => $categoryId,
         'filtered_from' => count($allProducts)

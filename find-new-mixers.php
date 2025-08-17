@@ -120,7 +120,8 @@ function buildWooBatchCreatePayload(array $santehTransformed, array $ekSkuLookup
  * Execute new-products discovery using provided Santehservice transformed array.
  * Returns the payload array directly.
  *
- * @param array<int, array<string, mixed>> $santehTransformed * @param array<int, array<string, mixed>> $ekProducts
+ * @param array<int, array<string, mixed>> $santehTransformed
+ * @param array<int, array<string, mixed>> $ekProducts
  * @return array<string, mixed>
  */
 function runFindNewProducts(array $santehTransformed, array $ekProducts): array
@@ -142,10 +143,7 @@ function runFindNewProducts(array $santehTransformed, array $ekProducts): array
 
     if (function_exists('safeLog')) {
         safeLog('info', 'find_new_mixers_complete', [
-            'ek_total' => $ekTotal,
-            'santeh_transformed_total' => $santehTotal,
-            'new_products' => $createCount,
-            'dump_path' => $dumpPath,
+            'new_products' => $createCount
         ]);
     }
 
